@@ -12,7 +12,7 @@
 Classification of New York State Mesonet (NYSM) imagery in terms of the presence/absence of precipitation. 
 
 Example imagery:
-![Readme Graphic](readme_graphics.png)
+![Readme Graphic](readme_graphics/readme_graphics.png)
 
 
 
