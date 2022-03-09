@@ -11,6 +11,10 @@
 ## About
 Classification of New York State Mesonet (NYSM) imagery in terms of the presence/absence of precipitation. 
 
+Example imagery:
+![Readme Graphic](readme_graphics.png)
+
+
 
 | Year | Daytime Rain Gauge Observations > 0 | Nighttime Rain Gauge Observations > 0 | Daytime rain Gauge Observations=0 | Nighttime Rain Gauge Observations = 0 |
 |------|-------------------------------------|:-------------------------------------:|-----------------------------------|---------------------------------------|
