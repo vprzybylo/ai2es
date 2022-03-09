@@ -1,0 +1,35 @@
+version: "2.1"
+services:
+  code-server:
+    build:
+      context: .
+      dockerfile: Dockerfile_codercom
+    image: vprzybylo/code_server:v1.0.0
+    container_name: code-server-vanessa
+    environment:
+      - PORT=8443 code-server
+      - PUID=1001
+      - PGID=1001
+      - DEFAULT_WORKSPACE=/raid/vanessa/ai2es/
+      - TZ=America/New_York
+    shm_size: '256G'
+    user: ${UID_GID}
+    volumes:
+      - /raid/NYSM/archive/nysm/cam_photos/:/ai2es/raw_photos/
+      - /home/vanessa/:/home/vanessa/
+      - /raid/vanessa/ai2es/:/ai2es/
+      - ${HOME}/.local/share/code-server/:/home/vanessa/.local/share/code-server
+      - ${PWD}:/home/coder/project
+    deploy:
+      resources:
+        limits:
+          cpus: '20'
+        reservations:
+          devices:
+            - driver: nvidia
+              capabilities: [ gpu ]
+              device_ids: [ '6,7' ]
+    ports:
+      - 8443:8443
+    restart: unless-stopped
+

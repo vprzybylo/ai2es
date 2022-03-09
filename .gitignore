@@ -1,0 +1,11 @@
+.nginx
+.env
+setup.py
+.DS_store
+raw_photos
+cam_photos
+logs
+saved_models
+saved_accuracies
+saved_val_loaders
+.vscode
