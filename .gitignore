@@ -14,3 +14,10 @@ NYSM
 worker*
 purge.lock
 global.lock
+dask-worker*
+.pyc
+test
+utils
+training_dataset
+images
+Docs
