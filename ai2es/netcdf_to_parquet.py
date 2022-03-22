@@ -66,16 +66,6 @@ class NYSM:
             subset=["precip_5min"]
         )
 
-    def image_paths(self, photo_dir="../cam_photos"):
-        """convert timestamp into image filename and append to df if there is a corresponding image"""
-        timestamp = self.df["time_5M"]
-        date_path = f"{photo_dir}/{timestamp.strftime('%Y')}/{time.strftime('%m')}/{time.strftime('%d')}"
-
-        # file_path = date_path+'/'+x['station']+'/'+time.strftime('%Y%m%dT%H%M')+'*'
-        # if(os.path.exists(site_path) and len(glob.glob(file_path))>0):
-        #     return glob.glob(file_path)[0]
-        # else: return None
-
     def write_parquet(self, path: str, filename: str):
         """write combined dataframe from multiple years/stations to parquet"""
         write(f"{path}/{filename}.parquet", self.df)
