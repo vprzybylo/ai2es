@@ -58,13 +58,10 @@ class NYSM:
         self.df = self.df.sort_values(by=["station", "time_5M"])
         self.df["precip_5min"] = self.df["precip"] - self.df["precip"].shift(1)
 
-        # check that negative precip only occurs at minute 05 from reset
-        print(
-            self.df["time_5M"].dt.time[
-                (self.df["precip_5min"] < 0.0) & (self.df["time_5M"].dt.minute != 5)
-            ]
-        )
-        # mask and drop negative 5 min precip values at 00:05:00 from gauge resetting for new day
+        # check when negative precip occurs
+        neg_precip = self.df["time_5M"].dt.time[(self.df["precip_5min"] < 0.0)]
+        print("negative precip occuring at minutes: ", neg_precip.unique())
+        # mask and drop negative 5 min precip values at  00:00:00 and 00:05:00 from gauge resetting for new day
         self.df = self.df.mask(self.df["precip_5min"] < 0, np.nan).dropna(
             subset=["precip_5min"]
         )

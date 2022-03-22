@@ -1,9 +1,7 @@
 """apply filters to NYSM/image parquet files"""
 import pandas as pd
 import opencv as cv2
-from skimage import color
-from skimage import io
-
+from multiprocessing import Pool
 
 class Filter:
     def __init__(self, parquet_dir="../NYSM/"):
@@ -14,9 +12,9 @@ class Filter:
         """read parquet file for a specified year"""
         self.df = pd.read_parquet(f"{self.parquet_dir}/{year}.parquet")
 
-    def day(self):
+    def day(self, img_path):
         """find images taken during the day"""
-        image = cv2.imread(self.df["image_path"])
+        image = cv2.imread(img_path)
         b, g, r = image[:, :, 0], image[:, :, 1], image[:, :, 2]
         return None if (b == g).all() and (b == r).all() else True
 
@@ -35,18 +33,27 @@ class Filter:
         """find images from a specific station id"""
         self.df = self.df[self.df["station"] == station]
 
-    def grayscale(self):
-        img = io.imread(self.df["img_path"])
-        return color.rgb2gray(img)
+    def grayscale(self, img_path):
+        image = cv2.imread(img_path)
+        return cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
 
 def main():
     options = Filter()
     options.read_parquet(2021)
-    options.day()  # or night()
+
+    pool = Pool(processes=8)
+    time_of_day = pool.map(options.day, options.df['img_paths']) # or night()
+    time_of_day = pool.map(options.precip, options.df['img_paths']) # or night()
+
     options.precip()  # of no_precip
     options.station_filter("TANN")
     options.grayscale()
+
+    print("[INFO] waiting for processes to finish...")
+    pool.close()
+    pool.join()
+	print("[INFO] multiprocessing complete")
 
 
 if __name__ == "__main__":
