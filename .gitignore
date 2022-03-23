@@ -11,6 +11,7 @@ saved_val_loaders
 .vscode
 docker_builds/README.md
 NYSM
+*.parquet
 worker*
 purge.lock
 global.lock

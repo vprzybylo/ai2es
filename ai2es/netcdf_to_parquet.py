@@ -1,5 +1,6 @@
-"""create dataframes of mesonet data for every station between 2015 and 2020
-two separate dataframes saved based on whether precip or no precip from rain gauge"""
+"""
+create dataframes of mesonet data for every station between 2015 and 2020
+"""
 
 import pandas as pd
 import numpy as np
@@ -84,7 +85,7 @@ def main():
         nysm.df = xr.open_mfdataset(group["filename"], parallel=True).to_dataframe()
         nysm.drop_unused_vars()
         nysm.five_min_precip()
-        # self.write_parquet("../NYSM/", f"{year}")
+        nysm.write_parquet("../mesonet_parquet", f"{year}")
         print(
             "[INFO] Done reading %s files in %.2f seconds"
             % (year, time.time() - start_time)
