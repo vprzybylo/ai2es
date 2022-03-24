@@ -2,7 +2,6 @@
 create dataframes of mesonet data for every station for 5 min observations
 """
 
-from re import T
 import pandas as pd
 import numpy as np
 import xarray as xr
@@ -10,19 +9,18 @@ import time
 import pyarrow.parquet as pq
 import pyarrow as pa
 import os
-from dask.distributed import Client, LocalCluster
+from typing import List
+from typing import TypeVar
 
-
-def start_client():
-    cluster = LocalCluster(n_workers=4)  # http://127.0.0.1:8787/status for dashboard
-    client = Client(cluster)
+NYSM_1M_type = TypeVar("NYSM_1M_type", bound="NYSM_1M")
+NYSM_5M_type = TypeVar("NYSM_5M_type", bound="NYSM_5M")
 
 
 class NYSM:
     """base class to drop unused vars, calculate precip diff based on
     temporal resolution, and convert to parquet files by year"""
 
-    def drop_unused_vars(self):
+    def drop_unused_vars(self) -> None:
         """only keep certain important variables"""
         keep_vars = [
             "tair",
@@ -31,9 +29,9 @@ class NYSM:
             "precip_total",
             "precip_max_intensity",
         ]
-        self.df = self.df[keep_vars]
+        self.df: pd.DataFrame = self.df[keep_vars]
 
-    def write_parquet(self, temporal_resolution: str, filename: str):
+    def write_parquet(self, temporal_resolution: str, filename: str) -> None:
         """write combined dataframe from multiple years/stations to parquet"""
 
         if temporal_resolution == "1M":
@@ -52,11 +50,11 @@ class NYSM_1M(NYSM):
     Copied from /raid/lgaudet/precip/Precip/NYSM_1min_data to local machine in /NYSM/1_min_obs
     Manually removed the few rows with 7 columns instead of 5 and values that were not floats (e.g., 0.00.00)"""
 
-    def __init__(self, csv_file_dir="../NYSM/1_min_obs"):
+    def __init__(self, csv_file_dir: str = "../NYSM/1_min_obs") -> None:
         self.csv_file_dir = csv_file_dir
         self.df = None
 
-    def read_data(self, group: pd.DataFrame):
+    def read_data(self, group: pd.DataFrame) -> None:
         """read csv's for each day and concatenate into df
         for reference on local machine:
             2017: 25.83 sec
@@ -83,14 +81,14 @@ class NYSM_1M(NYSM):
             files_in_year.append(df)
         self.df = pd.concat(files_in_year, axis=0, ignore_index=True)
 
-    def csv_file_list(self):
+    def csv_file_list(self) -> List[str]:
         """generate list of csv files of 1 min observations from csv_file_dir"""
-        filelist = []
+        filelist: List[str] = []
         for root, dirs, files in os.walk(self.csv_file_dir):
             filelist.extend(os.path.join(root, file) for file in files)
         return filelist
 
-    def grouped_df_year(self):
+    def grouped_df_year(self) -> pd.DataFrame:
         """group dataframe of NYSM files by year"""
         df = pd.DataFrame(self.csv_file_list(), columns=["filename"])
         df["year"] = df["filename"].str.split("/").str[4].str[:4]
@@ -101,7 +99,7 @@ class NYSM_1M(NYSM):
 class NYSM_5M(NYSM):
     """convert netcdf's to parquet for 5 min observations from 2015-2021"""
 
-    def __init__(self, nc_file_dir="../NYSM/archive/nysm/netcdf/proc/"):
+    def __init__(self, nc_file_dir: str = "../NYSM/archive/nysm/netcdf/proc/"):
         self.nc_file_dir = nc_file_dir
         self.df = None
 
@@ -110,23 +108,23 @@ class NYSM_5M(NYSM):
         timing on local machine for reference:
             2015: 13 sec
             2016: 84 sec
-            2017:  sec
-            2018: 37.31 sec
-            2019: 30.78 sec
-            2020: 31.30 sec
-            2021: 30.31 sec
-            2022: 6.25 sec (partial year)
+            2017: 47 sec
+            2018: 34 sec
+            2019: 29 sec
+            2020: 29 sec
+            2021: 29 sec
+            2022: 5 sec (partial year)
         """
         self.df = xr.open_mfdataset(group["filename"], parallel=True).to_dataframe()
 
-    def nc_file_list(self):
+    def nc_file_list(self) -> List[str]:
         """generate list of nc files in directory - encompasses all years/months/days available"""
-        filelist = []
+        filelist: List[str] = []
         for root, dirs, files in os.walk(self.nc_file_dir):
             filelist.extend(os.path.join(root, file) for file in files)
         return filelist
 
-    def grouped_df_year(self):
+    def grouped_df_year(self) -> pd.DataFrame:
         """group dataframe of NYSM files by year"""
         df = pd.DataFrame(self.nc_file_list(), columns=["filename"])
         df["year"] = df["filename"].str.split("/").str[6]
@@ -134,7 +132,8 @@ class NYSM_5M(NYSM):
         return df
 
     def precip_diff(self):
-        """calculate precip over 5 min observations
+        """
+        calculate precip over 5 min observations
         precip - since 00UTC every 5 mins
             resets to 0 at 00:05:00 or 00:00:00
         precip-total - Total Accumulated NRT (mm):
@@ -154,44 +153,62 @@ class NYSM_5M(NYSM):
         )
 
 
-def iterate_years(nysm, temporal_resolution: str):
-    """
-    read data for each year, drop unused vars,
-    calculate precip diff based on temporal resolution (1 or 5 min),
-    write df to parquet
+def iterate_years_5M(nysm: NYSM_5M_type) -> None:
+    """loop over years of data and convert to parquet
+    after dropping unused vars and calculating precip diff
+    between times/rows
+
+    Args:
+        nysm (NYSM_5M_type): class instance for 5 min observations
     """
     df = nysm.grouped_df_year()
     for year, group in df:
         start_time = time.time()
         print(f"[INFO] Reading files for {year}...")
         nysm.read_data(group)
-        if temporal_resolution == "5M":
-            nysm.drop_unused_vars()
-            nysm.precip_diff()  # 1M already has accumulation over the minute
-        nysm.write_parquet(temporal_resolution, f"{year}")
-        print(
-            "[INFO] Done reading %s files in %.2f seconds"
-            % (year, time.time() - start_time)
-        )
+        nysm.drop_unused_vars()
+        nysm.precip_diff()  # 1M already has accumulation over the minute
+        nysm.write_parquet("5M", f"{year}")
+        print_log(year, start_time)
 
 
-def main(temporal_resolution: str = "5M"):
-    """read and convert all NYSM files to pandas dataframes in parallel based on year
-    pass in '5M' for netcdf 5 minute resolution"""
-    try:
-        nysm = (
-            NYSM_1M()
-            if temporal_resolution == "1M"
-            else NYSM_5M()
-            if temporal_resolution == "5M"
-            else None
-        )
-    except ValueError:
-        if nysm is None:
-            print("temporal resolution needs to be either 1 minute or 5 minute")
+def iterate_years_1M(nysm: NYSM_1M_type) -> None:
+    """loop over years of data and convert to parquet
 
-    # start_client()  # start dask client
-    iterate_years(nysm, temporal_resolution)
+    Args:
+        nysm (NYSM_1M_type): class instance for 1 min observations
+    """
+    df = nysm.grouped_df_year()
+    for year, group in df:
+        start_time = time.time()
+        print(f"[INFO] Reading files for {year}...")
+        nysm.read_data(group)
+        nysm.write_parquet("1M", f"{year}")
+        print_log(year, start_time)
+
+
+def print_log(year: int, start_time: float) -> None:
+    """print when each year is done and how long the conversion took"""
+    print(
+        "[INFO] Done reading %s files in %.2f seconds"
+        % (year, time.time() - start_time)
+    )
+
+
+def main(temporal_resolution="1M"):
+    """
+    Read and convert all NYSM files to pandas dataframes in parallel based on year.
+    Drop unused vars, calculate precip diff based on temporal resolution (1 or 5 min),
+    and write df to parquet.
+    """
+    if temporal_resolution == "5M":
+        nysm = NYSM_5M()
+        iterate_years_5M(nysm)
+    elif temporal_resolution == "1M":
+        nysm = NYSM_1M()
+        iterate_years_1M(nysm)
+    else:
+        print("temporal resolution needs to be either 1 minute or 5 minute")
 
 
 if __name__ == "__main__":
