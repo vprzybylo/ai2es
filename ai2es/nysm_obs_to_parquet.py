@@ -1,5 +1,5 @@
 """
-create dataframes of mesonet data for every station for 5 min observations
+create parquet files of mesonet data for every station for either 1 min or 5 min observations
 """
 
 import pandas as pd
@@ -131,7 +131,7 @@ class NYSM_5M(NYSM):
         df = df.groupby("year")
         return df
 
-    def precip_diff(self):
+    def precip_diff(self) -> None:
         """
         calculate precip over 5 min observations
         precip - since 00UTC every 5 mins

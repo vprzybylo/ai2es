@@ -1,4 +1,5 @@
 .nginx
+ponicode
 .env
 setup.py
 .DS_store
