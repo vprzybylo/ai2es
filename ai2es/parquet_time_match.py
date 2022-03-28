@@ -3,10 +3,19 @@ import pandas as pd
 import os
 import numpy as np
 from datetime import datetime
-from typing import List
 import warnings
+from dask.distributed import Client, LocalCluster
 
 warnings.filterwarnings("ignore")
+
+
+def start_client(num_workers):
+    """initialize dask cluster"""
+    cluster = LocalCluster()
+    cluster.scale(num_workers)
+    client = Client(cluster)
+    print("dashboard link: ", cluster.dashboard_link)
+    return client
 
 
 class DateMatch:
@@ -46,7 +55,7 @@ class DateMatch:
 
     def check_time_diff(
         self, nysm_time: datetime, image_time: datetime, time_diff: int = 5
-    ) -> List[bool]:
+    ) -> bool:
         """ensure that the time matching between the camera time
         (image_time) and the nysm obs time (nysm_time) is less than time_diff minutes
 
@@ -59,6 +68,31 @@ class DateMatch:
         """
         time_delta_mins = divmod((image_time - nysm_time).total_seconds(), 60)[0]
         return time_delta_mins < time_diff
+
+    def match_dates_dask(self, group_nysm, group_cam):
+
+        # get the indices of the nysm datetimes at the closest match to the image datetimes
+        matched_date_indices = group_nysm.index.get_indexer(
+            group_cam.index, method="nearest"
+        )
+
+        # check that there is less than a 5 min time diff between when the image
+        # was taken and the matched nysm observation timestamp
+        time_diff = self.check_time_diff(
+            group_nysm.index[matched_date_indices],
+            group_cam.index,
+        )
+
+        group_cp = (
+            group_nysm.copy()
+        )  # to get rid of warning: "A value is trying to be set on a copy of a slice from a DataFrame"
+        # remove any indices where time match is too far apart
+        matched_date_indices = matched_date_indices[time_diff]
+
+        # assign datetime that image was taken to nysm df where time_diff returns true (i.e., close enough match)
+        group_cp["camera path"].iloc[matched_date_indices] = group_cam.index[time_diff]
+
+        return group_cp
 
     def find_closest_date(self, time_diff=5) -> None:
         """
@@ -73,37 +107,21 @@ class DateMatch:
         camera_stn = self.camera_df.groupby("stid")
         nysm_stn = self.df.groupby("stid")
         all_stn_groups = []
+
         for (stn, group_cam), (_, group_nysm) in zip(camera_stn, nysm_stn):
-
-            # get the indices of the nysm datetimes at the closest match to the image datetimes
-            matched_date_indices = group_nysm.index.get_indexer(
-                group_cam.index, method="nearest"
+            # compute each station in parallel and save to concat
+            all_stn_groups.append(
+                dask.delayed(self.match_dates_dask)(group_nysm, group_cam)
             )
-
-            # check that there is less than a 5 min time diff between when the image
-            # was taken and the matched nysm observation timestamp
-            time_diff = self.check_time_diff(
-                group_nysm.index[matched_date_indices],
-                group_cam.index,
-            )
-
-            group_cp = (
-                group_nysm.copy()
-            )  # to get rid of warning: "A value is trying to be set on a copy of a slice from a DataFrame"
-            # remove any indices where time match is too far apart
-            matched_date_indices = matched_date_indices[time_diff]
-
-            # assign datetime that image was taken to nysm df where time_diff returns true (i.e., close enough match)
-            group_cp["camera path"].iloc[matched_date_indices] = group_cam.index[
-                time_diff
-            ]
-
-            # append this station grouping out to save
-            all_stn_groups.append(group_cp)
+        print("[INFO] Starting dask client")
+        client = start_client(10)
+        print("[INFO] Matching dates between images and observations for all stations..")
+        matched_groups = client.compute(all_stn_groups)
+        matched_groups = client.gather(matched_group)
 
         len_before = len(self.df)
         # remove rows in nysm df that don't have corresponding image
-        self.df = pd.concat(all_stn_groups).dropna(subset=["camera path"])
+        self.df = pd.concat(matched_groups).dropna(subset=["camera path"])
         print("[INFO] Length of observations and matched images: ", len(self.df))
         print(
             f"[INFO] Removed {len_before - len(self.df)} rows of data that don't have a corresponding image"
