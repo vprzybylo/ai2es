@@ -4,26 +4,8 @@ import os
 import numpy as np
 from datetime import datetime
 import warnings
-from dask.distributed import Client, LocalCluster
-import dask
-
 
 warnings.filterwarnings("ignore")
-
-
-def start_client(num_workers):
-    """
-    initialize dask client
-    """
-    cluster = LocalCluster(
-        n_workers=4, threads_per_worker=1, memory_limit=None, silence_logs=False
-    )
-    print("dashboard link: ", cluster.dashboard_link)
-
-    # cluster.scale(num_workers)
-    client = Client(cluster)
-    print(client)
-    return client
 
 
 class DateMatch:
@@ -77,7 +59,23 @@ class DateMatch:
         time_delta_mins = divmod((image_time - nysm_time).total_seconds(), 60)[0]
         return time_delta_mins < time_diff
 
-    def match_dates_dask(self, group_nysm, group_cam):
+    def concat_stn_data(self, all_stn_groups: pd.DataFrame) -> None:
+        """concatenate all stations that have time matched data
+        print rows of obs that dont have a match"""
+        len_before = len(self.df)
+        # remove rows in nysm df that don't have corresponding image
+        self.df = pd.concat(all_stn_groups).dropna(subset=["camera path"])
+        print("[INFO] Length of observations and matched images: ", len(self.df))
+        print(
+            f"[INFO] Removed {len_before - len(self.df)} rows of data that don't have a corresponding image"
+        )
+
+    def find_closest_date(
+        self, group_nysm: pd.DataFrame, group_cam: pd.DataFrame
+    ) -> pd.DataFrame:
+        """for each datetime in the camera photo df, find the closest date in the mesonet df
+        - vectorized"""
+
         # get the indices of the nysm datetimes at the closest match to the image datetimes
         matched_date_indices = group_nysm.index.get_indexer(
             group_cam.index, method="nearest"
@@ -98,50 +96,26 @@ class DateMatch:
 
         # assign datetime that image was taken to nysm df where time_diff returns true (i.e., close enough match)
         group_cp["camera path"].iloc[matched_date_indices] = group_cam.index[time_diff]
-
         return group_cp
 
-    def concat_station_data(self, matched_groups) -> None:
-        len_before = len(self.df)
-        print(type(matched_groups))
-        # remove rows in nysm df that don't have corresponding image
-        self.df = pd.concat(matched_groups).dropna(subset=["camera path"])
-        print("[INFO] Length of observations and matched images: ", len(self.df))
-        print(
-            f"[INFO] Removed {len_before - len(self.df)} rows of data that don't have a corresponding image"
-        )
-
-    def find_closest_date(self, time_diff=5) -> None:
+    def group_by_stations(self, time_diff=5) -> None:
         """
-        for each datetime in the camera photo df, find the closest date in the mesonet df
-        - vectorized
+        First group camera df by station id since
+        there can be multiple identical times of images at diff stations.
+        Check that the stations in the obs df are also in the camera df
+        so that when we groupby stations the stations align
         """
         # eventually will hold the matched camera paths based on time and station
         self.df["camera path"] = np.nan
-
-        # First group camera df by station id since
-        # there can be multiple identical times of images at diff stations.
-        # Check that the stations in the obs df are also in the camera df
-        # so that when we groupby stations the stations align
         self.df = self.df.loc[self.df["stid"].isin(self.camera_df["stid"])]
-        # parallelize finding close dates between images and obs across station id groups
-        all_stn_groups = [
-            dask.delayed(self.match_dates_dask)(group_nysm, group_cam)
-            for (cam_stn, group_cam), (ny_stn, group_nysm) in zip(
-                self.camera_df.groupby("stid"), self.df.groupby("stid")
-            )
-        ]
-        print("[INFO] Starting dask client")
-        client = start_client(4)
-        print(
-            "[INFO] Matching dates between images and observations for all stations..",
-        )
-        matched_groups = client.compute(all_stn_groups)
-        matched_groups.dask.visualize()
-        print("matched_groups", matched_groups)
-        # matched_groups = client.gather(matched_groups)
 
-        self.concat_station_data(matched_groups)
+        all_stn_groups = []
+        for (cam_stn, group_cam), (ny_stn, group_nysm) in zip(
+            self.camera_df.groupby("stid"), self.df.groupby("stid")
+        ):
+            group_cp = self.find_closest_date(group_nysm, group_cam)
+            all_stn_groups.append(group_cp)
+        self.concat_stn_data(all_stn_groups)
 
 
 def main() -> None:
@@ -151,7 +125,7 @@ def main() -> None:
         match = DateMatch(year)
         match.read_parquet()
         match.camera_photo_paths()
-        match.find_closest_date()
+        match.group_by_stations()
 
 
 if __name__ == "__main__":
