@@ -5,16 +5,24 @@ import numpy as np
 from datetime import datetime
 import warnings
 from dask.distributed import Client, LocalCluster
+import dask
+
 
 warnings.filterwarnings("ignore")
 
 
 def start_client(num_workers):
-    """initialize dask cluster"""
-    cluster = LocalCluster()
-    cluster.scale(num_workers)
-    client = Client(cluster)
+    """
+    initialize dask client
+    """
+    cluster = LocalCluster(
+        n_workers=4, threads_per_worker=1, memory_limit=None, silence_logs=False
+    )
     print("dashboard link: ", cluster.dashboard_link)
+
+    # cluster.scale(num_workers)
+    client = Client(cluster)
+    print(client)
     return client
 
 
@@ -70,7 +78,6 @@ class DateMatch:
         return time_delta_mins < time_diff
 
     def match_dates_dask(self, group_nysm, group_cam):
-
         # get the indices of the nysm datetimes at the closest match to the image datetimes
         matched_date_indices = group_nysm.index.get_indexer(
             group_cam.index, method="nearest"
@@ -94,6 +101,16 @@ class DateMatch:
 
         return group_cp
 
+    def concat_station_data(self, matched_groups) -> None:
+        len_before = len(self.df)
+        print(type(matched_groups))
+        # remove rows in nysm df that don't have corresponding image
+        self.df = pd.concat(matched_groups).dropna(subset=["camera path"])
+        print("[INFO] Length of observations and matched images: ", len(self.df))
+        print(
+            f"[INFO] Removed {len_before - len(self.df)} rows of data that don't have a corresponding image"
+        )
+
     def find_closest_date(self, time_diff=5) -> None:
         """
         for each datetime in the camera photo df, find the closest date in the mesonet df
@@ -102,30 +119,29 @@ class DateMatch:
         # eventually will hold the matched camera paths based on time and station
         self.df["camera path"] = np.nan
 
-        # first group camera df by station id
-        # there can be multiple identical times of images at diff stations
-        camera_stn = self.camera_df.groupby("stid")
-        nysm_stn = self.df.groupby("stid")
-        all_stn_groups = []
-
-        for (stn, group_cam), (_, group_nysm) in zip(camera_stn, nysm_stn):
-            # compute each station in parallel and save to concat
-            all_stn_groups.append(
-                dask.delayed(self.match_dates_dask)(group_nysm, group_cam)
+        # First group camera df by station id since
+        # there can be multiple identical times of images at diff stations.
+        # Check that the stations in the obs df are also in the camera df
+        # so that when we groupby stations the stations align
+        self.df = self.df.loc[self.df["stid"].isin(self.camera_df["stid"])]
+        # parallelize finding close dates between images and obs across station id groups
+        all_stn_groups = [
+            dask.delayed(self.match_dates_dask)(group_nysm, group_cam)
+            for (cam_stn, group_cam), (ny_stn, group_nysm) in zip(
+                self.camera_df.groupby("stid"), self.df.groupby("stid")
             )
+        ]
         print("[INFO] Starting dask client")
-        client = start_client(10)
-        print("[INFO] Matching dates between images and observations for all stations..")
-        matched_groups = client.compute(all_stn_groups)
-        matched_groups = client.gather(matched_group)
-
-        len_before = len(self.df)
-        # remove rows in nysm df that don't have corresponding image
-        self.df = pd.concat(matched_groups).dropna(subset=["camera path"])
-        print("[INFO] Length of observations and matched images: ", len(self.df))
+        client = start_client(4)
         print(
-            f"[INFO] Removed {len_before - len(self.df)} rows of data that don't have a corresponding image"
+            "[INFO] Matching dates between images and observations for all stations..",
         )
+        matched_groups = client.compute(all_stn_groups)
+        matched_groups.dask.visualize()
+        print("matched_groups", matched_groups)
+        # matched_groups = client.gather(matched_groups)
+
+        self.concat_station_data(matched_groups)
 
 
 def main() -> None:
