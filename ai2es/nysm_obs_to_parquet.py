@@ -11,11 +11,14 @@ import pyarrow as pa
 import os
 from typing import List
 from typing import TypeVar
+from dataclasses import dataclass
+
 
 NYSM_1M_type = TypeVar("NYSM_1M_type", bound="NYSM_1M")
 NYSM_5M_type = TypeVar("NYSM_5M_type", bound="NYSM_5M")
 
 
+@dataclass
 class NYSM:
     """base class to drop unused vars, calculate precip diff based on
     temporal resolution, and convert to parquet files by year"""
@@ -45,14 +48,14 @@ class NYSM:
         pq.write_table(pa.Table.from_pandas(self.df), f"{path}/{filename}.parquet")
 
 
+@dataclass
 class NYSM_1M(NYSM):
     """convert csv's to parquet for 1 min observations from 2017-2021
-    Copied from /raid/lgaudet/precip/Precip/NYSM_1min_data to local machine in /NYSM/1_min_obs
+    Mounted from /raid/lgaudet/precip/Precip/NYSM_1min_data to /ai2es/1_min_obs
     Manually removed the few rows with 7 columns instead of 5 and values that were not floats (e.g., 0.00.00)"""
 
-    def __init__(self, csv_file_dir: str = "../NYSM/1_min_obs") -> None:
-        self.csv_file_dir = csv_file_dir
-        self.df = None
+    csv_file_dir: str = "/ai2es/1_min_obs"
+    df: pd.DataFrame = None
 
     def read_data(self, group: pd.DataFrame) -> None:
         """read csv's for each day and concatenate into df
@@ -63,29 +66,36 @@ class NYSM_1M(NYSM):
             2020: 28.32 sec
             2021: 27.41 sec
         """
-        files_in_year = []
 
+        files_in_year = []
         for filename in group["filename"]:
-            df = pd.read_csv(
-                filename,
-                header=0,
-                on_bad_lines="skip",  # skip some rows that have 7 columns instead of 5..
-                dtype={
-                    "stid": "str",
-                    "datetime": "str",
-                    "intensity [mm/min]": "float64",
-                    "precip_accum_1min [mm]": "float64",
-                    "precip_total [mm]": "float64",
-                },
+            files_in_year.append(
+                pd.read_csv(
+                    filename,
+                    header=0,
+                    on_bad_lines="skip",  # skip some rows that have 7 columns instead of 5..
+                    dtype={
+                        "stid": "str",
+                        "datetime": "str",
+                        "intensity [mm/min]": "float64",
+                        "precip_accum_1min [mm]": "float64",
+                        "precip_total [mm]": "float64",
+                    },
+                )
             )
-            files_in_year.append(df)
+
         self.df = pd.concat(files_in_year, axis=0, ignore_index=True)
 
     def csv_file_list(self) -> List[str]:
         """generate list of csv files of 1 min observations from csv_file_dir"""
         filelist: List[str] = []
         for root, dirs, files in os.walk(self.csv_file_dir):
-            filelist.extend(os.path.join(root, file) for file in files)
+
+            filelist.extend(
+                os.path.join(root, file)
+                for file in files
+                if "checkpoint" not in file and file.endswith("csv")
+            )
         return filelist
 
     def grouped_df_year(self) -> pd.DataFrame:
@@ -96,12 +106,15 @@ class NYSM_1M(NYSM):
         return df
 
 
+@dataclass
 class NYSM_5M(NYSM):
-    """convert netcdf's to parquet for 5 min observations from 2015-2021"""
+    """
+    convert netcdf's to parquet for 5 min observations from 2015-2021
+    mounted in container from /raid/NYSM/archive/nysm/netcdf/proc/:/ai2es/5_min_obs/
+    """
 
-    def __init__(self, nc_file_dir: str = "../NYSM/archive/nysm/netcdf/proc/"):
-        self.nc_file_dir = nc_file_dir
-        self.df = None
+    nc_file_dir: str = "/ai2es/5_min_obs"
+    df: pd.DataFrame = None
 
     def read_data(self, group: pd.DataFrame):
         """use xarray to open netcdf's in parallel and convert to pd.DataFrame
@@ -121,7 +134,9 @@ class NYSM_5M(NYSM):
         """generate list of nc files in directory - encompasses all years/months/days available"""
         filelist: List[str] = []
         for root, dirs, files in os.walk(self.nc_file_dir):
-            filelist.extend(os.path.join(root, file) for file in files)
+            filelist.extend(
+                os.path.join(root, file) for file in files if file.endswith("csv")
+            )
         return filelist
 
     def grouped_df_year(self) -> pd.DataFrame:
