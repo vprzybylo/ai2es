@@ -8,6 +8,12 @@
 isort:skip_file
 """
 
+# /raid/NYSM/archive/nysm/netcdf/proc/ on hulk
+nc_file_dir = "/ai2es/5_min_obs"
+
+# /raid/lgaudet/precip/Precip/NYSM_1min_data on hulk
+csv_file_dir = "/ai2es/1_min_obs"
+
 # where to write time  matched data
 write_path = f"/ai2es/matched_parquet/"
 

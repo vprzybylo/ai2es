@@ -12,7 +12,7 @@ import os
 from typing import List
 from typing import TypeVar
 from dataclasses import dataclass
-
+import config
 
 NYSM_1M_type = TypeVar("NYSM_1M_type", bound="NYSM_1M")
 NYSM_5M_type = TypeVar("NYSM_5M_type", bound="NYSM_5M")
@@ -54,7 +54,6 @@ class NYSM_1M(NYSM):
     Mounted from /raid/lgaudet/precip/Precip/NYSM_1min_data to /ai2es/1_min_obs
     Manually removed the few rows with 7 columns instead of 5 and values that were not floats (e.g., 0.00.00)"""
 
-    csv_file_dir: str = "/ai2es/1_min_obs"
     df: pd.DataFrame = None
 
     def read_data(self, group: pd.DataFrame) -> None:
@@ -89,7 +88,7 @@ class NYSM_1M(NYSM):
     def csv_file_list(self) -> List[str]:
         """generate list of csv files of 1 min observations from csv_file_dir"""
         filelist: List[str] = []
-        for root, dirs, files in os.walk(self.csv_file_dir):
+        for root, dirs, files in os.walk(config.csv_file_dir):
 
             filelist.extend(
                 os.path.join(root, file)
@@ -113,7 +112,6 @@ class NYSM_5M(NYSM):
     mounted in container from /raid/NYSM/archive/nysm/netcdf/proc/:/ai2es/5_min_obs/
     """
 
-    nc_file_dir: str = "/ai2es/5_min_obs"
     df: pd.DataFrame = None
 
     def read_data(self, group: pd.DataFrame):
@@ -133,7 +131,7 @@ class NYSM_5M(NYSM):
     def nc_file_list(self) -> List[str]:
         """generate list of nc files in directory - encompasses all years/months/days available"""
         filelist: List[str] = []
-        for root, dirs, files in os.walk(self.nc_file_dir):
+        for root, dirs, files in os.walk(config.nc_file_dir):
             filelist.extend(
                 os.path.join(root, file) for file in files if file.endswith("csv")
             )

@@ -12,7 +12,7 @@ class ImageFilter:
 
     def read_df(self):
         """read parquet file that has yearly df of images"""
-        self.df = pd.read_parquet(f"/ai2es/matched_parquet/{self.year}.parquet")
+        self.df = pd.read_parquet(f"/ai2es/matched_parquet/{str(self.year)}.parquet")
 
     def day(self, img_path: str):
         """find images taken during the day"""
@@ -54,7 +54,7 @@ class ImageFilter:
 
 
 def main() -> None:
-    filt = ImageFilter(year)
+    filt = ImageFilter(2017)
 
     # pool = Pool(processes=8)
     # time_of_day = pool.map(filt.day, filt.df['img_paths']) # or night()
