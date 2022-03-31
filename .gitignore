@@ -12,6 +12,7 @@ saved_val_loaders
 .vscode
 docker_builds/README.md
 NYSM
+*.pyc
 *.parquet
 worker*
 purge.lock
@@ -26,3 +27,4 @@ Docs
 1_min_obs
 5_min_obs
 matched_parquet
+notebooks

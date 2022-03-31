@@ -52,7 +52,7 @@ class Images:
         self.create_station_col()
         self.create_datetime_col()
         self.camera_df = self.camera_df.set_index(["datetime"])
-        print(f"[INFO] There are {len(self.camera_df)} images taken in {self.year}")
+        print(f"[INFO] {self.year}: There were {len(self.camera_df)} images taken.")
 
 
 @dataclass
@@ -75,7 +75,7 @@ class DateMatch(Images):
     def remove_duplicate_dates(self):
         """ensure the datetime index has unique values"""
         print(
-            f"[INFO] Removing {self.df.index.duplicated().sum()} duplicate dates for {self.year}"
+            f"[INFO] {self.year}: Removing {self.df.index.duplicated().sum()} duplicate dates."
         )
 
     def check_time_diff(
@@ -95,7 +95,7 @@ class DateMatch(Images):
         actual_time_delta = np.abs(image_time - nysm_time)
         return actual_time_delta < timedelta(minutes=time_diff)
 
-    def concat_stn_data(self, timer: float) -> None:
+    def concat_stn_data(self) -> None:
         """
         Concatenate all stations that have time matched data
         Remove rows of obs that dont have a match
@@ -106,10 +106,10 @@ class DateMatch(Images):
         len_before = len(self.df)
         self.df = pd.concat(self.all_stn_groups).dropna(subset=["camera path"])
         print(
-            f"[INFO] {len(self.df)} observations were matched with images in {round(timer, 2)} seconds"
+            f"[INFO] {self.year}: {len(self.df)} observations were matched with images."
         )
         print(
-            f"[INFO] {len_before - len(self.df)} rows of data were removed that don't have a corresponding image."
+            f"[INFO] {self.year}: {len_before - len(self.df)} rows of data were removed that don't have a corresponding image."
         )
 
     def find_closest_date(
@@ -176,18 +176,19 @@ class DateMatch(Images):
 
     def time_diff_average(self) -> None:
         """print stats on how far apart obs are from image timestamps (<time_diff mins)"""
-        actual_time_diff = self.df["camera path"] - self.df.index  # datetime
-        print(
-            f"[INFO] Distribution stats for {self.year} for how far apart obs and image time stamps are:"
+        actual_time_diff = np.abs(
+            pd.to_datetime(self.df["camera path"]) - self.df.index
         )
-        actual_time_diff.describe()
+        print(
+            f"[INFO] {self.year}: Distribution stats for how far apart obs and image time stamps are: {actual_time_diff.describe()}"
+        )
 
     def remove_precip_nans(self) -> None:
         """remove obs that have NaNs for precip_accum_1min [mm]"""
         len_before = len(self.df)
         self.df = self.df.dropna(subset="precip_accum_1min [mm]")
         print(
-            f"[INFO] Removed {len_before-len(self.df)} precip accumulation observations that are NaN"
+            f"[INFO] {self.year}: Removed {len_before-len(self.df)} precip accumulation observations that are NaN"
         )
 
     def write_df_per_year(self) -> None:
@@ -203,7 +204,7 @@ def process_years(year: int) -> None:
     match.camera_photo_paths()
     match.read_parquet()
     match.group_by_stations()
-    match.concat_stn_data(time.time() - start_time)
+    match.concat_stn_data()
     match.remove_precip_nans()
     match.time_diff_average()
     match.write_df_per_year()
