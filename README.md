@@ -14,6 +14,14 @@ Classification of New York State Mesonet (NYSM) imagery in terms of the presence
 Example imagery:
 ![Readme Graphic](readme_graphics/readme_graphics.png)
 
+| Year | Total Images | Images with corresponding NYSM precip obs within 5 mins | Average time diff between obs and image |
+|:----:|:------------:|:-------------------------------------------------------:|-----------------------------------------|
+| 2017 |   7,839,092  |                        7,826,085                        | 20s                                     |
+| 2018 |   8,170,875  |                        8,165,358                        | 28s                                     |
+| 2019 |   8,268,443  |                        7,896,188                        | 28s                                     |
+| 2020 |   8,170,875  |                        8,152,737                        | 25s                                     |
+| 2021 |   8,178,937  |                        8,042,326                        | 24s                                     |
+
 
 | Year | Daytime Rain Gauge Observations > 0 | Nighttime Rain Gauge Observations > 0 | Daytime rain Gauge Observations=0 | Nighttime Rain Gauge Observations = 0 |
 |:----:|:-----------------------------------:|:-------------------------------------:|:---------------------------------:|:-------------------------------------:|
