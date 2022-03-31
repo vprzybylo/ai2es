@@ -9,6 +9,8 @@ import time
 from dataclasses import dataclass
 from multiprocessing import Pool
 from pathlib import Path
+from datetime import timedelta
+import config
 
 warnings.filterwarnings("ignore")
 
@@ -39,16 +41,12 @@ class Images:
             format="%Y%m%dT%H%M%S",
         )
 
-    def camera_photo_paths(
-        self, photo_dir: str = "/ai2es/cam_photos/"
-    ) -> None:  # sourcery skip: for-append-to-extend
-        """create dataframe of camera images including station ids, paths, and datetimes
+    def camera_photo_paths(self) -> None:
+        """create dataframe of camera images including station ids, paths, and datetimes"""
 
-        Args:
-            photo_dir (str, optional): directory of camera photos (before each year).
-        """
-
-        photo_files = Path(os.path.join(photo_dir, str(self.year))).rglob("*.jpg")
+        photo_files = Path(os.path.join(config.photo_dir, str(self.year))).rglob(
+            "*.jpg"
+        )
 
         self.camera_df = pd.DataFrame({"path": photo_files}).astype(str)
         self.create_station_col()
@@ -61,7 +59,6 @@ class Images:
 class DateMatch(Images):
     """match camera images to closest mesonet observation in time for each station"""
 
-    parquet_dir: str = "/ai2es/mesonet_parquet_1M"
     df: pd.DataFrame = None  # mesonet obs df
     all_station_groups = (
         None  # list of pd.Dataframe of time matched stations to be concatenated
@@ -70,9 +67,15 @@ class DateMatch(Images):
     def read_parquet(self) -> None:
         """read parquet file holding mesonet data for a specified year (all stations)"""
         self.df = (
-            pd.read_parquet(f"{self.parquet_dir}/{self.year}.parquet")
+            pd.read_parquet(f"{config.parquet_dir}/{self.year}.parquet")
             .set_index(["datetime"])
             .sort_values(by=["datetime"])
+        )
+
+    def remove_duplicate_dates(self):
+        """ensure the datetime index has unique values"""
+        print(
+            f"[INFO] Removing {self.df.index.duplicated().sum()} duplicate dates for {self.year}"
         )
 
     def check_time_diff(
@@ -88,8 +91,9 @@ class DateMatch(Images):
                                        the image was taken and when the mesonet observation was recorded.
                                        Defaults to 5.
         """
-        time_delta_mins = divmod((image_time - nysm_time).total_seconds(), 60)[0]
-        return time_delta_mins < time_diff
+        # time_delta_mins = divmod((image_time - nysm_time).total_seconds(), 60)[0]
+        actual_time_delta = np.abs(image_time - nysm_time)
+        return actual_time_delta < timedelta(minutes=time_diff)
 
     def concat_stn_data(self, timer: float) -> None:
         """
@@ -122,6 +126,9 @@ class DateMatch(Images):
             group_cp (pd.DataFrame): time matched df for a station
 
         """
+        group_nysm = group_nysm[~group_nysm.index.duplicated()].sort_index()
+        group_nysm = group_nysm[group_nysm.index.notnull()]
+        group_cam = group_cam[~group_cam.index.duplicated()].sort_index()
 
         # get the indices of the nysm datetimes at the closest match to the image datetimes
         matched_date_indices = group_nysm.index.get_indexer(
@@ -167,9 +174,25 @@ class DateMatch(Images):
             group_cp = self.find_closest_date(group_nysm, group_cam)
             self.all_stn_groups.append(group_cp)
 
+    def time_diff_average(self) -> None:
+        """print stats on how far apart obs are from image timestamps (<time_diff mins)"""
+        actual_time_diff = self.df["camera path"] - self.df.index  # datetime
+        print(
+            f"[INFO] Distribution stats for {self.year} for how far apart obs and image time stamps are:"
+        )
+        actual_time_diff.describe()
+
+    def remove_precip_nans(self) -> None:
+        """remove obs that have NaNs for precip_accum_1min [mm]"""
+        len_before = len(self.df)
+        self.df = self.df.dropna(subset="precip_accum_1min [mm]")
+        print(
+            f"[INFO] Removed {len_before-len(self.df)} precip accumulation observations that are NaN"
+        )
+
     def write_df_per_year(self) -> None:
         """output time matched df's per year for all stations"""
-        self.df.to_parquet(f"/ai2es/matched_parquet/{self.year}.parquet")
+        self.df.to_parquet(f"{config.write_path}/{self.year}.parquet")
 
 
 def process_years(year: int) -> None:
@@ -181,6 +204,8 @@ def process_years(year: int) -> None:
     match.read_parquet()
     match.group_by_stations()
     match.concat_stn_data(time.time() - start_time)
+    match.remove_precip_nans()
+    match.time_diff_average()
     match.write_df_per_year()
     print(f"[INFO] Year {year} completed in {round(time.time()-start_time, 2)} seconds")
 
