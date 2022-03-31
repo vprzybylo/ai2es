@@ -1,4 +1,4 @@
-"""apply filters to NYSM parquet files by year"""
+"""match NYSM camera images to precip observations for all stations by year"""
 import pandas as pd
 import os
 import numpy as np
@@ -6,9 +6,9 @@ from datetime import datetime
 import warnings
 import pandas as pd
 import time
-from typing import List
 from dataclasses import dataclass
 from multiprocessing import Pool
+from pathlib import Path
 
 warnings.filterwarnings("ignore")
 
@@ -40,7 +40,7 @@ class Images:
         )
 
     def camera_photo_paths(
-        self, photo_dir: str = "../cam_photos/"
+        self, photo_dir: str = "/ai2es/cam_photos/"
     ) -> None:  # sourcery skip: for-append-to-extend
         """create dataframe of camera images including station ids, paths, and datetimes
 
@@ -48,15 +48,7 @@ class Images:
             photo_dir (str, optional): directory of camera photos (before each year).
         """
 
-        photo_files = []
-        # only get files for a specific year
-        for path, subdirs, files in os.walk(os.path.join(photo_dir, str(self.year))):
-            for name in files:
-                [
-                    photo_files.append(os.path.join(path, name))
-                    for name in files
-                    if name.lower().endswith(".jpg")
-                ]
+        photo_files = Path(os.path.join(photo_dir, str(self.year))).rglob("*.jpg")
 
         self.camera_df = pd.DataFrame({"path": photo_files}).astype(str)
         self.create_station_col()
@@ -69,8 +61,11 @@ class Images:
 class DateMatch(Images):
     """match camera images to closest mesonet observation in time for each station"""
 
-    parquet_dir: str = "../mesonet_parquet_1M"
+    parquet_dir: str = "/ai2es/mesonet_parquet_1M"
     df: pd.DataFrame = None  # mesonet obs df
+    all_station_groups = (
+        None  # list of pd.Dataframe of time matched stations to be concatenated
+    )
 
     def read_parquet(self) -> None:
         """read parquet file holding mesonet data for a specified year (all stations)"""
@@ -96,18 +91,16 @@ class DateMatch(Images):
         time_delta_mins = divmod((image_time - nysm_time).total_seconds(), 60)[0]
         return time_delta_mins < time_diff
 
-    def concat_stn_data(self, all_stn_groups: List[pd.DataFrame], timer: float) -> None:
-        print(type(all_stn_groups))
+    def concat_stn_data(self, timer: float) -> None:
         """
         Concatenate all stations that have time matched data
         Remove rows of obs that dont have a match
 
         Args:
-            all_stn_groups (List[pd.DataFrame]): list of image matched dfs from each station
             timer (float): how long it took to group and match obs with images
         """
         len_before = len(self.df)
-        self.df = pd.concat(all_stn_groups).dropna(subset=["camera path"])
+        self.df = pd.concat(self.all_stn_groups).dropna(subset=["camera path"])
         print(
             f"[INFO] {len(self.df)} observations were matched with images in {round(timer, 2)} seconds"
         )
@@ -152,7 +145,7 @@ class DateMatch(Images):
         group_cp["camera path"].iloc[matched_date_indices] = group_cam.index[time_diff]
         return group_cp
 
-    def group_by_stations(self, time_diff=5) -> List[pd.DataFrame]:
+    def group_by_stations(self, time_diff=5) -> None:
         """
         First group camera df by station id since there can be multiple
         identical times of images at diff stations.
@@ -167,17 +160,16 @@ class DateMatch(Images):
         self.df = self.df.loc[self.df["stid"].isin(self.camera_df["stid"])]
 
         start_time = time.time()
-        all_stn_groups = []
+        self.all_stn_groups = []
         for (cam_stn, group_cam), (ny_stn, group_nysm) in zip(
             self.camera_df.groupby("stid"), self.df.groupby("stid")
         ):
             group_cp = self.find_closest_date(group_nysm, group_cam)
-            all_stn_groups.append(group_cp)
-        return all_stn_groups
+            self.all_stn_groups.append(group_cp)
 
-    def write_df_per_year(self, all_stn_groups: pd.DataFrame) -> None:
+    def write_df_per_year(self) -> None:
         """output time matched df's per year for all stations"""
-        all_stn_groups.to_parquet(f"../matched_parquet/{self.year}.parquet")
+        self.df.to_parquet(f"/ai2es/matched_parquet/{self.year}.parquet")
 
 
 def process_years(year: int) -> None:
@@ -187,9 +179,9 @@ def process_years(year: int) -> None:
     match = DateMatch(year=year)
     match.camera_photo_paths()
     match.read_parquet()
-    all_stn_groups = match.group_by_stations()
-    all_stn_groups = match.concat_stn_data(all_stn_groups, time.time() - start_time)
-    match.write_df_per_year(all_stn_groups)
+    match.group_by_stations()
+    match.concat_stn_data(time.time() - start_time)
+    match.write_df_per_year()
     print(f"[INFO] Year {year} completed in {round(time.time()-start_time, 2)} seconds")
 
 
@@ -198,6 +190,7 @@ def main() -> None:
     pool = Pool(len(years))
     pool.map(process_years, years)
     pool.close()
+    end_time = time.time()
 
 
 if __name__ == "__main__":
