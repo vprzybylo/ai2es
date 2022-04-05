@@ -72,12 +72,6 @@ class DateMatch(Images):
             .sort_values(by=["datetime"])
         )
 
-    def remove_duplicate_dates(self):
-        """ensure the datetime index has unique values"""
-        print(
-            f"[INFO] {self.year}: Removing {self.df.index.duplicated().sum()} duplicate dates."
-        )
-
     def check_time_diff(
         self, nysm_time: datetime, image_time: datetime, time_diff: int = 5
     ) -> bool:
@@ -104,12 +98,12 @@ class DateMatch(Images):
             timer (float): how long it took to group and match obs with images
         """
         len_before = len(self.df)
-        self.df = pd.concat(self.all_stn_groups).dropna(subset=["camera path"])
+        self.df = pd.concat(self.all_stn_groups).dropna()
         print(
-            f"[INFO] {self.year}: {len(self.df)} observations were matched with images."
+            f"[INFO] {self.year}: {len(self.df)} observations were matched with images that have precip data."
         )
         print(
-            f"[INFO] {self.year}: {len_before - len(self.df)} rows of data were removed that don't have a corresponding image."
+            f"[INFO] {self.year}: {len_before - len(self.df)} rows of data were removed that don't have a corresponding image or precip data."
         )
 
     def find_closest_date(
@@ -149,7 +143,8 @@ class DateMatch(Images):
         matched_date_indices = matched_date_indices[time_diff]
 
         # assign datetime that image was taken to nysm df where time_diff returns true (i.e., close enough match)
-        group_cp["camera path"].iloc[matched_date_indices] = group_cam.index[time_diff]
+        group_cp["camera time"].iloc[matched_date_indices] = group_cam.index[time_diff]
+        group_cp["path"].iloc[matched_date_indices] = group_cam["path"][time_diff]
         return group_cp
 
     def group_by_stations(self, time_diff=5) -> None:
@@ -162,8 +157,9 @@ class DateMatch(Images):
         Args:
             time_diff (int): time difference allowed between image and obs time. Defaults to 5 mins
         """
-        # eventually will hold the matched camera paths based on time and station
-        self.df["camera path"] = np.nan
+        # eventually will hold the matched camera times based on time and station
+        self.df["camera time"] = np.nan
+        self.df["path"] = np.nan
         self.df = self.df.loc[self.df["stid"].isin(self.camera_df["stid"])]
 
         start_time = time.time()
@@ -177,18 +173,10 @@ class DateMatch(Images):
     def time_diff_average(self) -> None:
         """print stats on how far apart obs are from image timestamps (<time_diff mins)"""
         actual_time_diff = np.abs(
-            pd.to_datetime(self.df["camera path"]) - self.df.index
+            pd.to_datetime(self.df["camera time"]) - self.df.index
         )
         print(
             f"[INFO] {self.year}: Distribution stats for how far apart obs and image time stamps are: {actual_time_diff.describe()}"
-        )
-
-    def remove_precip_nans(self) -> None:
-        """remove obs that have NaNs for precip_accum_1min [mm]"""
-        len_before = len(self.df)
-        self.df = self.df.dropna(subset="precip_accum_1min [mm]")
-        print(
-            f"[INFO] {self.year}: Removed {len_before-len(self.df)} precip accumulation observations that are NaN"
         )
 
     def write_df_per_year(self) -> None:
@@ -205,7 +193,6 @@ def process_years(year: int) -> None:
     match.read_parquet()
     match.group_by_stations()
     match.concat_stn_data()
-    match.remove_precip_nans()
     match.time_diff_average()
     match.write_df_per_year()
     print(f"[INFO] Year {year} completed in {round(time.time()-start_time, 2)} seconds")

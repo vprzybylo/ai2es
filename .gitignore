@@ -29,3 +29,5 @@ Docs
 matched_parquet
 notebooks
 night_precip
+image-classification-tool
+*.jpg
