@@ -69,7 +69,7 @@ BATCH_SIZE = [28]
 MAX_EPOCHS = [15]
 
 # names of each ice crystal class
-CLASS_NAMES = ["precipitation", "no precipitation", "obstructed"]
+CLASS_NAMES = ["no precipitation", "obstructed", "precipitation"]
 
 # models to train
 MODEL_NAMES = [
@@ -137,7 +137,7 @@ METRICS_SAVENAME = (
     f"{len(MODEL_NAMES)}model(s).csv"
 )
 
-CONF_MATRIX_SAVENAME = "{BASE_DIR}/plots/conf_matrix.png"
+CONF_MATRIX_SAVENAME = f"{BASE_DIR}/plots/conf_matrix.png"
 
 # where to save final databases to
 FINAL_DIR = f"{BASE_DIR}/final_databases/vgg16/{TAG}/"

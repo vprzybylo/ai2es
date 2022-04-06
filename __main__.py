@@ -1,6 +1,6 @@
 import cocpit
 
-import cocpit.config as config  # isort: split
+from ai2es import config as config  # isort: split
 import os
 import time
 
@@ -40,7 +40,7 @@ def classification():
 
     # load df of quality ice particles to make predictions on
     df = pd.read_csv(df_path)
-    df = cocpit.run_model.main(df, open_dir, model)
+    df = cocpit.run_model.main(df, model)  # remove open_dir from run_model
     # df.to_csv(df_path, index=False)
 
     print("done classifying all images!")
@@ -51,7 +51,7 @@ if __name__ == "__main__":
 
     print(
         "num workers in loader = {}".format(config.NUM_WORKERS)
-    ) if config.ICE_CLASSIFICATION or config.BUILD_MODEL else print(
+    ) if config.CLASSIFICATION or config.BUILD_MODEL else print(
         "num cpus for parallelization = {}".format(config.NUM_WORKERS)
     )
 
@@ -59,11 +59,9 @@ if __name__ == "__main__":
     years = [2018] if config.BUILD_MODEL else [2018, 2019, 2020, 2021]
     for year in years:
         print("years: ", year)
-        # directory where the individual raw images live for each year to classify (not in training dataset)
-        open_dir = f"cpi_data/campaigns/{year}/single_imgs_v1.4.0/"
 
         # create dir for final databases
-        outname = year + ".csv"
+        outname = f"{year}.parquet"
 
         df_path = os.path.join(config.FINAL_DIR, outname)
 

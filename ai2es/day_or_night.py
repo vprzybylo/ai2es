@@ -55,7 +55,7 @@ class ImageFilter:
 
 def main() -> None:
 
-    year = 2020
+    year = 2017
     filt = ImageFilter(year)
     filt.read_parquet()
     print(f'{len(filt.df["path"])} files to process')
