@@ -27,7 +27,7 @@ class GUI:
         self.undo_btn = Button(description="Undo")
         self.buttons = []
 
-    def open_image(self) -> PIL.JpegImagePlugin.JpegImageFile:
+    def open_image(self):
         try:
             image = PIL.Image.open(self.all_paths[self.index])
 
@@ -52,6 +52,14 @@ class GUI:
     def undo(self, b):
         self.index = self.index - 1
         self.display_image()
+
+        # undo the move and remove file
+        filename = self.all_paths[self.index].split("/")[-1]
+        for label in self.labels:
+            if filename in os.listdir(os.path.join(self.folder_dest, label)):
+                os.remove(
+                    os.path.join(self.folder_dest, label, filename),
+                )
 
     def display_image(self):
         """
