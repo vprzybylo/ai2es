@@ -42,12 +42,12 @@ TAG = "v0.0.0"
 BUILD_MODEL = True
 
 # classify images on new data?
-CLASSIFICATION = True
+CLASSIFICATION = False
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # model to load
-MODEL_PATH = f"{BASE_DIR}/saved_models/no_mask/{TAG}/e[15]_bs[64]_k0_vgg16.pt"
+MODEL_PATH = f"{BASE_DIR}/saved_models/no_mask/{TAG}/e[15]_bs[28]_k0_vgg16.pt"
 
 # workers for parallelization
 NUM_CPUS = 10
@@ -71,6 +71,9 @@ MAX_EPOCHS = [15]
 # names of each ice crystal class
 CLASS_NAMES = ["no precipitation", "obstructed", "precipitation"]
 
+# any abbreviations in folder names where the data lives for each class
+CLASS_NAMES_DIRS = ["no_precip", "obstructed", "precip"]
+
 # models to train
 MODEL_NAMES = [
     #     "efficient",
@@ -83,9 +86,6 @@ MODEL_NAMES = [
     #     "densenet169",
     #     "densenet201",
 ]
-
-# model to load
-MODEL_PATH = f"{BASE_DIR}/saved_models/{TAG}/e[15]_bs[64]_k1_vgg16.pt"
 
 # directory that holds the training data
 DATA_DIR = f"{BASE_DIR}/night_precip_hand_labeled/2017/"
