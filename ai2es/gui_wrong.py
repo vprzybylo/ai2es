@@ -13,7 +13,7 @@ from IPython.display import clear_output
 from ipywidgets import Button
 from PIL import Image
 
-from ai2es import config as config
+import cocpit.config as config
 from cocpit.auto_str import auto_str
 
 
@@ -51,18 +51,13 @@ class GUI:
             self.all_paths = all_paths
 
     def open_image(self):
-        try:
-            image = Image.open(self.all_paths[self.index])
-        except FileNotFoundError:
-            print("This file was already moved and cannot be found. Please hit Next.")
-        return image
+        return Image.open(self.all_paths[self.index])
 
     def make_buttons(self):
         """
         use ipywidgets to create a box for the image, bar chart, dropdown,
         and next button
         """
-
         self.label = self.all_labels[self.index]
         self.center = ipywidgets.Output()  # center image with predictions
         self.menu = ipywidgets.Dropdown(
@@ -108,12 +103,16 @@ class GUI:
         # add chart to ipywidgets.Output()
         with self.center:
             if self.wrong:
-                self.topk_probs = self.all_topk_probs[self.index]
-                self.topk_classes = self.all_topk_classes[self.index]
+                if len(self.all_topk_probs) > self.index:
+                    self.topk_probs = self.all_topk_probs[self.index]
+                    self.topk_classes = self.all_topk_classes[self.index]
 
-                # puts class names in order based on probabilty of prediction
-                crystal_names = [config.CLASS_NAMES[e] for e in self.topk_classes]
-                self.view_classifications_wrong(self.topk_probs, crystal_names)
+                    # puts class names in order based on probabilty of prediction
+                    crystal_names = [config.CLASS_NAMES[e] for e in self.topk_classes]
+                    self.view_classifications_wrong(self.topk_probs, crystal_names)
+                else:
+                    print("You have completed looking at all incorrect predictions!")
+                    return
             else:
                 self.view_classifications()
 
@@ -125,7 +124,12 @@ class GUI:
         fig, (ax1, ax2) = plt.subplots(
             constrained_layout=True, figsize=(8, 8), ncols=1, nrows=2
         )
-        image = self.open_image()
+        try:
+            image = self.open_image()
+        except FileNotFoundError:
+            print("This file was already moved and cannot be found.")
+            return
+
         ax1.imshow(image)
         ax1.set_title(
             f"Human Labeled as: {config.CLASS_NAMES[self.all_labels[self.index]]}\n"
@@ -140,6 +144,7 @@ class GUI:
         ax2.tick_params(axis="y", rotation=45)
         ax2.invert_yaxis()  # labels read top-to-bottom
         ax2.set_title("Class Probability")
+        # fig.savefig(f"/ai2es/plots/wrong_preds{21+self.index}.pdf")
         plt.show()
 
     def view_classifications(self):
