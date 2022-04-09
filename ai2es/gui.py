@@ -10,6 +10,7 @@ from ipywidgets import Button
 import PIL
 from shutil import copyfile
 import os
+from typing import Union
 
 
 class GUI:
@@ -27,29 +28,39 @@ class GUI:
         self.undo_btn = Button(description="Undo")
         self.buttons = []
 
-    def open_image(self):
+    def open_image(self) -> Union[PIL.Image.Image, None]:
         try:
             image = PIL.Image.open(self.all_paths[self.index])
+            return image
 
         except FileNotFoundError:
             print("This file was already moved and cannot be found. Please hit Next.")
-        return image
+            return
 
-    def make_buttons(self):
+    def make_buttons(self) -> None:
+        """buttons for each category and undo button"""
         self.undo_btn.on_click(self.undo)
 
         for idx, label in enumerate(self.labels):
             self.buttons.append(Button(description=label))
             self.buttons[idx].on_click(self.cp_to_dir)
 
-    def cp_to_dir(self, b):
+    def cp_to_dir(self, b) -> None:
+        """
+        copy from original dir to new directory with class label
+        Args:
+            b: button instance
+        """
         filename = self.all_paths[self.index].split("/")[-1]
         output_path = os.path.join(self.folder_dest, b.description, filename)
         copyfile(self.all_paths[self.index], output_path)
         self.index = self.index + 1
         self.display_image()
 
-    def undo(self, b):
+    def undo(self, b) -> None:
+        """
+        undo moving image into folder
+        """
         self.index = self.index - 1
         self.display_image()
 
@@ -61,7 +72,7 @@ class GUI:
                     os.path.join(self.folder_dest, label, filename),
                 )
 
-    def display_image(self):
+    def display_image(self) -> None:
         """
         show image
         """

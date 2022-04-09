@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from IPython.display import clear_output
 from ipywidgets import Button
-from PIL import Image
+import PIL
 
 import cocpit.config as config
 from cocpit.auto_str import auto_str
@@ -36,7 +36,6 @@ class GUI:
     ):
 
         self.index = 0
-        self.wrong_trunc = wrong_trunc  # indices of wrong predictions
         self.all_labels = all_labels[wrong_trunc]
         self.all_paths = all_paths[wrong_trunc]
         self.all_topk_probs = all_topk_probs[wrong_trunc]
@@ -51,10 +50,10 @@ class GUI:
         self.count = 0  # number of moved images
         self.center = ipywidgets.Output()  # center image with predictions
 
-    def open_image(self):
-        return Image.open(self.all_paths[self.index])
+    def open_image(self) -> PIL.Image.Image:
+        return PIL.Image.open(self.all_paths[self.index])
 
-    def button_functions(self):
+    def button_functions(self) -> None:
         """
         create next button that progresses through incorrect predictions
         define save image on change for dropdown
@@ -63,14 +62,14 @@ class GUI:
         self.menu.observe(self.on_change, names="value")
         self.next_btn.on_click(self.on_button_next)
 
-    def on_change(self, change):
+    def on_change(self, change) -> None:
         """
         when a class in the dropdown is selected, move the image and save
         it to the specified class
         """
         self.save_image(change)
 
-    def on_button_next(self, b):
+    def on_button_next(self, b) -> None:
         """
         when the next button is clicked, make a new image and bar chart appear
         by updating the index within the wrong predictions by 1
@@ -86,7 +85,7 @@ class GUI:
         # don't want it to change based on previous selection
         self.menu.value = config.CLASS_NAMES_DIRS[self.label]
 
-    def bar_chart(self):
+    def bar_chart(self) -> None:
         """
         use the human and model labels and classes to
         create a bar chart with the top k predictions
@@ -106,7 +105,7 @@ class GUI:
                 print("You have completed looking at all incorrect predictions!")
                 return
 
-    def view_classifications_wrong(self, probs, crystal_names):
+    def view_classifications_wrong(self, probs, crystal_names) -> None:
         """
         create barchart that outputs top k predictions for a given image
         """
@@ -138,7 +137,7 @@ class GUI:
         # fig.savefig(f"/ai2es/plots/wrong_preds{21+self.index}.pdf")
         plt.show()
 
-    def save_image(self, change):
+    def save_image(self, change) -> None:
         """
         move the image based on dropdown selection
         """
