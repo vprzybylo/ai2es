@@ -26,7 +26,7 @@ class ImageFilter:
             f"[INFO] Read {self.year} parquet file in {time.time()-start_time} seconds."
         )
 
-    def time_of_day(self, file):
+    def time_of_day(self, file: str) -> bool:
         """find if images were taken during the day or night"""
 
         image = np.asarray(Image.open(file))

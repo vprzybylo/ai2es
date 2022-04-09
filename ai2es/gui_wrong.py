@@ -16,62 +16,52 @@ from PIL import Image
 import cocpit.config as config
 from cocpit.auto_str import auto_str
 
+plt_params = {
+    "axes.labelsize": "xx-large",
+    "axes.titlesize": "xx-large",
+    "xtick.labelsize": "xx-large",
+    "ytick.labelsize": "xx-large",
+    "legend.title_fontsize": 12,
+}
+plt.rcParams["font.family"] = "serif"
+plt.rcParams.update(plt_params)
+
 
 @auto_str
 class GUI:
-    """
-    creates buttons in notebooks/move_wrong_predictions.ipynb
-    and notebooks/gui_check_dataset_one_class.ipynb
-    to label predictions
-    """
+    """create widgets"""
 
-    def __init__(self, all_labels=None, all_paths=None, b=None, wrong=True):
-        # b is an instance of TestBatchPredictions which inherits LoaderPredictions
-        # passsing b in here so that LoaderPredictions __init__
-        # is not called again/variables reinitialized.  Using in gui_move_wrong_predictions.ipynb
-        self.wrong = wrong
+    def __init__(
+        self, wrong_trunc, all_labels, all_paths, all_topk_probs, all_topk_classes
+    ):
+
         self.index = 0
+        self.wrong_trunc = wrong_trunc  # indices of wrong predictions
+        self.all_labels = all_labels[wrong_trunc]
+        self.all_paths = all_paths[wrong_trunc]
+        self.all_topk_probs = all_topk_probs[wrong_trunc]
+        self.all_topk_classes = all_topk_classes[wrong_trunc]
+        self.label = self.all_labels[self.index]
+        self.next_btn = Button(description="Next")
+        self.menu = ipywidgets.Dropdown(
+            options=config.CLASS_NAMES_DIRS,
+            description="Category:",
+            value=config.CLASS_NAMES_DIRS[self.label],
+        )
         self.count = 0  # number of moved images
-        self.center = None
-        self.menu = None
-        self.forward = None
-
-        if self.wrong:
-            # variables at wrong indices based on user input of specific categories to sift through
-            # used in gui_move_wrong_prediction.ipynb
-            self.all_labels = b.all_labels[b.wrong_trunc]
-            self.all_paths = b.all_paths[b.wrong_trunc]
-            self.all_topk_probs = b.all_topk_probs[b.wrong_trunc]
-            self.all_topk_classes = b.all_topk_classes[b.wrong_trunc]
-
-        else:
-            # used in gui_check_dataset_one_class.ipynb
-            # all labels and paths of training dataset
-            self.all_labels = all_labels
-            self.all_paths = all_paths
+        self.center = ipywidgets.Output()  # center image with predictions
 
     def open_image(self):
         return Image.open(self.all_paths[self.index])
 
-    def make_buttons(self):
+    def button_functions(self):
         """
-        use ipywidgets to create a box for the image, bar chart, dropdown,
-        and next button
+        create next button that progresses through incorrect predictions
+        define save image on change for dropdown
         """
-        self.label = self.all_labels[self.index]
-        self.center = ipywidgets.Output()  # center image with predictions
-        self.menu = ipywidgets.Dropdown(
-            options=config.CLASS_NAMES,
-            description="Category:",
-            value=config.CLASS_NAMES[self.label],
-        )
-
         self.bar_chart()
         self.menu.observe(self.on_change, names="value")
-
-        # create button that progresses through incorrect predictions
-        self.forward = Button(description="Next")
-        self.forward.on_click(self.on_button_next)
+        self.next_btn.on_click(self.on_button_next)
 
     def on_change(self, change):
         """
@@ -84,6 +74,9 @@ class GUI:
         """
         when the next button is clicked, make a new image and bar chart appear
         by updating the index within the wrong predictions by 1
+
+        Args:
+            b: button instance
         """
 
         self.index = self.index + 1
@@ -91,7 +84,7 @@ class GUI:
 
         # keep the default dropdown value to agg
         # don't want it to change based on previous selection
-        self.menu.value = config.CLASS_NAMES[self.label]
+        self.menu.value = config.CLASS_NAMES_DIRS[self.label]
 
     def bar_chart(self):
         """
@@ -100,21 +93,18 @@ class GUI:
         from the image at the current index
         """
 
-        # add chart to ipywidgets.Output()
+        # # add chart to ipywidgets.Output()
         with self.center:
-            if self.wrong:
-                if len(self.all_topk_probs) > self.index:
-                    self.topk_probs = self.all_topk_probs[self.index]
-                    self.topk_classes = self.all_topk_classes[self.index]
+            if len(self.all_topk_probs) > self.index:
+                self.topk_probs = self.all_topk_probs[self.index]
+                self.topk_classes = self.all_topk_classes[self.index]
 
-                    # puts class names in order based on probabilty of prediction
-                    crystal_names = [config.CLASS_NAMES[e] for e in self.topk_classes]
-                    self.view_classifications_wrong(self.topk_probs, crystal_names)
-                else:
-                    print("You have completed looking at all incorrect predictions!")
-                    return
+                # puts class names in order based on probabilty of prediction
+                crystal_names = [config.CLASS_NAMES[e] for e in self.topk_classes]
+                self.view_classifications_wrong(self.topk_probs, crystal_names)
             else:
-                self.view_classifications()
+                print("You have completed looking at all incorrect predictions!")
+                return
 
     def view_classifications_wrong(self, probs, crystal_names):
         """
@@ -122,7 +112,7 @@ class GUI:
         """
         clear_output()  # so that the next fig doesnt display below
         fig, (ax1, ax2) = plt.subplots(
-            constrained_layout=True, figsize=(8, 8), ncols=1, nrows=2
+            constrained_layout=True, figsize=(9, 9), ncols=1, nrows=2
         )
         try:
             image = self.open_image()
@@ -133,7 +123,8 @@ class GUI:
         ax1.imshow(image)
         ax1.set_title(
             f"Human Labeled as: {config.CLASS_NAMES[self.all_labels[self.index]]}\n"
-            f"Model Labeled as: {crystal_names[0]}"
+            f"Model Labeled as: {crystal_names[0]}\n"
+            f"Index number: {self.index+1}"
         )
         ax1.axis("off")
 
@@ -145,22 +136,6 @@ class GUI:
         ax2.invert_yaxis()  # labels read top-to-bottom
         ax2.set_title("Class Probability")
         # fig.savefig(f"/ai2es/plots/wrong_preds{21+self.index}.pdf")
-        plt.show()
-
-    def view_classifications(self):
-        """
-        show image
-        """
-        clear_output()  # so that the next fig doesnt display below
-        image = self.open_image()
-        fig, ax1 = plt.subplots(
-            constrained_layout=True, figsize=(9, 9), ncols=1, nrows=1
-        )
-        ax1.imshow(image)
-        ax1.set_title(
-            f"Human Labeled as: {config.CLASS_NAMES[self.all_labels[self.index]]}\n"
-        )
-        ax1.axis("off")
         plt.show()
 
     def save_image(self, change):
