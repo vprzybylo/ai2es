@@ -45,7 +45,7 @@ class GUI:
         self.menu = ipywidgets.Dropdown(
             options=config.CLASS_NAMES_DIRS,
             description="Category:",
-            value=config.CLASS_NAMES_DIRS[self.label],
+            value=config.CLASS_NAMES[self.label],
         )
         self.count = 0  # number of moved images
         self.center = ipywidgets.Output()  # center image with predictions
@@ -83,7 +83,7 @@ class GUI:
 
         # keep the default dropdown value to agg
         # don't want it to change based on previous selection
-        self.menu.value = config.CLASS_NAMES_DIRS[self.label]
+        self.menu.value = config.CLASS_NAMES[self.label]
 
     def bar_chart(self) -> None:
         """
@@ -143,12 +143,12 @@ class GUI:
         """
         filename = self.all_paths[self.index].split("/")[-1]
         print(
-            f"{config.DATA_DIR}{config.CLASS_NAMES_DIRS[self.all_labels[self.index]]}/{filename}"
+            f"{config.DATA_DIR}{config.CLASS_NAMES_MAP[self.all_labels[self.index]]}/{filename}"
         )
         print(f"{config.DATA_DIR}{change.new}/{filename}")
         try:
             shutil.move(
-                f"{config.DATA_DIR}{config.CLASS_NAMES_DIRS[self.all_labels[self.index]]}/{filename}",
+                f"{config.DATA_DIR}{config.CLASS_NAMES_MAP[self.all_labels[self.index]]}/{filename}",
                 f"{config.DATA_DIR}{change.new}/{filename}",
             )
             self.count += 1

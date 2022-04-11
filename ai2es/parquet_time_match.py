@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from multiprocessing import Pool
 from pathlib import Path
 from datetime import timedelta
-import config
+import cocpit.config as config
 
 warnings.filterwarnings("ignore")
 
