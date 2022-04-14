@@ -186,7 +186,9 @@ def main():
         {"precip": int, "no precip": int, "obstructed": int}
     )
 
-    return df_all_stns.style.background_gradient()
+    return df_all_stns.style.background_gradient(
+        subset=["precip", "no precip", "obstructed"], axis=None
+    )
 
 
 if __name__ == "__main__":

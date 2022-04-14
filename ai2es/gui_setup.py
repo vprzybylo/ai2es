@@ -4,6 +4,7 @@ import cocpit
 import os
 import pandas as pd
 from typing import Tuple
+import itertools
 
 
 def read_parquet(
@@ -48,5 +49,27 @@ def make_folders(folder_dest) -> None:
             os.makedirs(save_path)
 
 
-def show_new_images(self):
-    """Make sure images shown haven't already been labeled"""
+def show_new_images(df: pd.DataFrame) -> pd.DataFrame:
+    """Make sure images shown haven't already been labeled
+
+    Args:
+        df (pd.DataFrame): input df with all paths from read parquet
+    Returns:
+        df (pd.DataFrame): df where paths are removed if already labeled
+    """
+
+    all_classes = [
+        os.listdir(
+            os.path.join(cocpit.config.DATA_DIR, cocpit.config.CLASS_NAME_MAP[class_])
+        )
+        for class_ in cocpit.config.CLASS_NAMES
+    ]
+    all_classes = list(itertools.chain.from_iterable(all_classes))
+    already_labeled = pd.DataFrame({"path": all_classes})
+    df_paths = pd.DataFrame(
+        {"paths": df["path"].reset_index(drop=True).str.split("/").str[-1]}
+    )
+    len_before = len(df)
+    df = df[~df_paths["paths"].isin(already_labeled["path"])]
+    print(f"Removing {len_before-len(df)} images that have already been labeled")
+    return df
