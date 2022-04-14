@@ -1,6 +1,6 @@
 import cocpit
 
-from ai2es import config as config  # isort: split
+import cocpit.config as config  # isort: split
 import os
 import time
 
