@@ -66,9 +66,7 @@ def show_new_images(df: pd.DataFrame) -> pd.DataFrame:
     ]
     all_classes = list(itertools.chain.from_iterable(all_classes))
     already_labeled = pd.DataFrame({"path": all_classes})
-    df_paths = pd.DataFrame(
-        {"paths": df["path"].reset_index(drop=True).str.split("/").str[-1]}
-    )
+    df_paths = pd.DataFrame({"paths": df["path"].str.split("/").str[-1]})
     len_before = len(df)
     df = df[~df_paths["paths"].isin(already_labeled["path"])]
     print(f"Removing {len_before-len(df)} images that have already been labeled")
