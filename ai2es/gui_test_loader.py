@@ -25,7 +25,7 @@ plt.rcParams.update(plt_params)
 class GUI:
     """create widgets"""
 
-    def __init__(self, all_paths, all_topk_probs, all_topk_classes, precip):
+    def __init__(self, all_paths, all_topk_probs, all_topk_classes, precip=None):
 
         self.index = 0
         self.all_paths = all_paths
@@ -58,7 +58,7 @@ class GUI:
 
     def init_fig(self, image: PIL.Image.Image, ax1: plt.Axes) -> None:
         """
-        display the image
+        display the raw image
 
         Args:
             image (PIL.Image.Image): opened image
@@ -67,11 +67,16 @@ class GUI:
         clear_output()  # so that the next fig doesnt display below
         ax1.imshow(image, aspect="auto")
         station = self.all_paths[self.index].split("/")[-1].split("_")[-1].split(".")[0]
-        ax1.set_title(
-            f"Model Labeled as: {[config.CLASS_NAMES[e] for e in self.all_topk_classes[self.index]][0]}\n"
-            f"Station: {station}\n"
-            f"1 min precip accumulation: {self.precip[self.index].values[0]}"
-        )
+        if self.precip:
+            ax1.set_title(
+                f"Model Labeled as: {[config.CLASS_NAMES[e] for e in self.all_topk_classes[self.index]][0]}\n"
+                f"Station: {station}\n"
+                f"1 min precip accumulation: {self.precip[self.index].values[0]}"
+            )
+        else:
+            ax1.set_title(
+                f"Model Labeled as: {[config.CLASS_NAMES[e] for e in self.all_topk_classes[self.index]][0]}\n"
+            )
         ax1.axis("off")
 
     def bar_chart(self, ax3: plt.Axes) -> None:
