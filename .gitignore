@@ -32,3 +32,4 @@ night_precip
 image-classification-tool
 *.jpg
 plots
+/night_precip_hand_labeled

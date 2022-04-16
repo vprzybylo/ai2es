@@ -1,0 +1,5 @@
+outs:
+- md5: c9f2d6d9b173d38f64e24f6e60aa5471.dir
+  size: 2738055884
+  nfiles: 43970
+  path: night_precip_hand_labeled
