@@ -8,6 +8,7 @@ import torch
 import cocpit
 import cocpit.config as config
 from cocpit.auto_str import auto_str
+from typing import Optional
 
 plt_params = {
     "axes.labelsize": "xx-large",
@@ -36,8 +37,12 @@ class GUI:
         self.center = ipywidgets.Output()  # center image with predictions
         self.precip = precip
 
-    def open_image(self) -> PIL.Image.Image:
-        return PIL.Image.open(self.all_paths[self.index])
+    def open_image(self) -> Optional[PIL.Image.Image]:
+        try:
+            return PIL.Image.open(self.all_paths[self.index])
+        except FileNotFoundError:
+            print("The file cannot be found.")
+            return
 
     def on_button_next(self, b) -> None:
         """
@@ -47,67 +52,78 @@ class GUI:
         Args:
             b: button instance
         """
-
+        print("here")
         self.index = self.index + 1
-        self.bar_chart()
+        self.visualizations()
 
-    def bar_chart(self) -> None:
+    def init_fig(self, image: PIL.Image.Image, ax1: plt.Axes) -> None:
         """
-        use the human and model labels and classes to
-        create a bar chart with the top k predictions
-        from the image at the current index
-        """
+        display the image
 
-        # # add chart to ipywidgets.Output()
-        with self.center:
-            if len(self.all_topk_probs) > self.index:
-
-                self.topk_probs = self.all_topk_probs[self.index]
-                self.topk_classes = self.all_topk_classes[self.index]
-
-                # puts class names in order based on probabilty of prediction
-                crystal_names = [config.CLASS_NAMES[e] for e in self.topk_classes]
-                self.view_classifications(self.topk_probs, crystal_names)
-
-            else:
-                print("You have completed looking at all predictions!")
-                return
-
-    def view_classifications(self, probs, crystal_names) -> None:
-        """
-        create barchart that outputs top k predictions for a given image
+        Args:
+            image (PIL.Image.Image): opened image
+            ax1 (plt.Axes): subplot axis
         """
         clear_output()  # so that the next fig doesnt display below
-        fig, (ax1, ax2, ax3) = plt.subplots(
-            constrained_layout=True, figsize=(7, 11), ncols=1, nrows=3
+        ax1.imshow(image, aspect="auto")
+        station = self.all_paths[self.index].split("/")[-1].split("_")[-1].split(".")[0]
+        ax1.set_title(
+            f"Model Labeled as: {[config.CLASS_NAMES[e] for e in self.all_topk_classes[self.index]][0]}\n"
+            f"Station: {station}\n"
+            f"1 min precip accumulation: {self.precip[self.index].values[0]}"
         )
-        try:
-            image = self.open_image()
-            ax1.imshow(image, aspect="auto")
-            station = (
-                self.all_paths[self.index].split("/")[-1].split("_")[-1].split(".")[0]
-            )
-            ax1.set_title(
-                f"Model Labeled as: {crystal_names[0]}\n"
-                f"Station: {station}\n"
-                f"1 min precip accumulation: {self.precip[self.index].values[0]}"
-            )
-            ax1.axis("off")
+        ax1.axis("off")
 
-            model = torch.load(config.MODEL_PATH).cuda()
-            file = self.all_paths[self.index]
-            cocpit.plotting_scripts.saliency.saliency_test_set(model, file, ax2)
+    def bar_chart(self, ax3: plt.Axes) -> None:
+        """create barchart that outputs top k predictions for a given image
 
-            y_pos = np.arange(len(self.topk_probs))
-            ax3.barh(y_pos, probs, align="center")
-            ax3.set_yticks(y_pos)
-            ax3.set_yticklabels(crystal_names)
-            ax3.tick_params(axis="y", rotation=45)
-            ax3.invert_yaxis()  # labels read top-to-bottom
-            ax3.set_title("Class Probability")
-            # fig.savefig(f"/ai2es/plots/wrong_preds{21+self.index}.pdf")
-            plt.show()
+        Args:
+            ax3 (plt.Axes): subplot axis
+        """
+        y_pos = np.arange(len(self.all_topk_probs[self.index]))
+        ax3.barh(y_pos, self.all_topk_probs[self.index], align="center")
+        ax3.set_yticks(y_pos)
+        ax3.set_yticklabels(
+            [config.CLASS_NAMES[e] for e in self.all_topk_classes[self.index]]
+        )
+        ax3.tick_params(axis="y", rotation=45)
+        ax3.invert_yaxis()  # labels read top-to-bottom
+        ax3.set_title("Class Probability")
 
-        except FileNotFoundError:
-            print("This file was already moved and cannot be found.")
-            return
+    def plot_saliency(
+        self, image: PIL.Image.Image, ax2: plt.Axes, size: int = 224
+    ) -> None:
+        """create saliency map for image in test dataset
+
+        Args:
+            image (PIL.Image.Image): opened image
+            ax2 (plt.Axes): subplot axis
+            size (int): image size for transformation
+        """
+        image = cocpit.plotting_scripts.saliency.preprocess(image.convert("RGB"), size)
+        saliency, _, _ = cocpit.plotting_scripts.saliency.get_saliency(image)
+        ax2.imshow(saliency[0], cmap=plt.cm.hot, aspect="auto")
+        ax2.axes.xaxis.set_ticks([])
+        ax2.axes.yaxis.set_ticks([])
+
+    def visualizations(self) -> None:
+        """
+        use the human and model labels and classes to
+        show the image prediction probability per class and
+        output a saliency map for the current image
+        """
+
+        # add chart to ipywidgets.Output()
+        with self.center:
+            if self.index == len(self.all_topk_probs):
+                print("You have completed looking at all predictions!")
+                return
+            else:
+                image = self.open_image()
+                _, (ax1, ax2, ax3) = plt.subplots(
+                    constrained_layout=True, figsize=(7, 11), ncols=1, nrows=3
+                )
+                self.init_fig(image, ax1)
+                self.plot_saliency(image, ax2)
+                self.bar_chart(ax3)
+                plt.show()
