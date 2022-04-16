@@ -64,10 +64,15 @@ def show_new_images(df: pd.DataFrame) -> pd.DataFrame:
         )
         for class_ in cocpit.config.CLASS_NAMES
     ]
+
     all_classes = list(itertools.chain.from_iterable(all_classes))
     already_labeled = pd.DataFrame({"path": all_classes})
+    print("Already labeled: ", len(already_labeled))
     df_paths = pd.DataFrame({"paths": df["path"].str.split("/").str[-1]})
+    print("Observations in parquet file: ", len(df_paths))
     len_before = len(df)
     df = df[~df_paths["paths"].isin(already_labeled["path"])]
-    print(f"Removing {len_before-len(df)} images that have already been labeled")
+    print(
+        f"Removing {len_before-len(df)} images that have already been labeled. {len(df)} remain."
+    )
     return df
