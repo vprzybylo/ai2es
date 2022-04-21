@@ -8,6 +8,19 @@ import pandas as pd
 import torch
 
 
+def nofold_training(model_name, batch_size, epochs):
+    f = cocpit.fold_setup.FoldSetup(model_name, batch_size, epochs)
+    f.nofold_indices()
+    f.split_data()
+    f.create_dataloaders()
+    optimizer, model = cocpit.model_config.main(model_name)
+    cocpit.train_model.main(f.dataloaders, epochs, optimizer, model)
+
+def fold_training(model_name, batch_size, epochs):
+    f = cocpit.fold_setup.FoldSetup(model_name, batch_size, epochs)
+    f.kfold_training()  # model config and training happens in here
+    
+
 def train_models():
     """
     train ML models
@@ -20,14 +33,11 @@ def train_models():
             for epochs in config.MAX_EPOCHS:
                 print("MAX EPOCH: ", epochs)
 
-                cocpit.fold_setup.main(
-                    batch_size,
-                    model_name,
-                    epochs,
-                )
-                cocpit.train_model.main(epochs)
-
-
+                if config.KFOLD != 0:
+                    fold_training(model_name, batch_size, epochs)
+                else:
+                    nofold_training(model_name, batch_size, epochs)
+                
 def classification():
     """
     classify images using the ML model
