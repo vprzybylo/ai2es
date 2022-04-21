@@ -8,7 +8,7 @@ import pandas as pd
 import torch
 
 
-def build_model():
+def train_models():
     """
     train ML models
     """
@@ -20,11 +20,12 @@ def build_model():
             for epochs in config.MAX_EPOCHS:
                 print("MAX EPOCH: ", epochs)
 
-                cocpit.setup_training.main(
+                cocpit.fold_setup.main(
                     batch_size,
                     model_name,
                     epochs,
                 )
+                cocpit.train_model.main(epochs)
 
 
 def classification():
@@ -66,7 +67,7 @@ if __name__ == "__main__":
         df_path = os.path.join(config.FINAL_DIR, outname)
 
         if config.BUILD_MODEL:
-            build_model()
+            train_models()
 
         if config.CLASSIFICATION:
             classification()
