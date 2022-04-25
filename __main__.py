@@ -14,12 +14,13 @@ def nofold_training(model_name, batch_size, epochs):
     f.split_data()
     f.create_dataloaders()
     optimizer, model = cocpit.model_config.main(model_name)
-    cocpit.train_model.main(f.dataloaders, epochs, optimizer, model)
+    cocpit.runner.main(f.dataloaders, optimizer, model, epochs, model_name, batch_size)
+
 
 def fold_training(model_name, batch_size, epochs):
     f = cocpit.fold_setup.FoldSetup(model_name, batch_size, epochs)
     f.kfold_training()  # model config and training happens in here
-    
+
 
 def train_models():
     """
@@ -37,7 +38,8 @@ def train_models():
                     fold_training(model_name, batch_size, epochs)
                 else:
                     nofold_training(model_name, batch_size, epochs)
-                
+
+
 def classification():
     """
     classify images using the ML model
