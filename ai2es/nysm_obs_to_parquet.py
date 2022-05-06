@@ -1,5 +1,5 @@
 """
-create parquet files of mesonet data for every station for either 1 min or 5 min observations
+create yearly parquet files of mesonet data for every station for either 1 min or 5 min observations
 """
 
 import pandas as pd
@@ -10,21 +10,21 @@ import pyarrow.parquet as pq
 import pyarrow as pa
 import os
 from typing import List
-from typing import TypeVar
-from dataclasses import dataclass
-import config
-
-NYSM_1M_type = TypeVar("NYSM_1M_type", bound="NYSM_1M")
-NYSM_5M_type = TypeVar("NYSM_5M_type", bound="NYSM_5M")
+from dataclasses import dataclass, field
+from cocpit import config as config
 
 
 @dataclass
 class NYSM:
-    """base class to drop unused vars, calculate precip diff based on
-    temporal resolution, and convert to parquet files by year"""
+    """
+    Base class to drop unused vars and convert to parquet files by year
+
+    Args:
+        df: pd.DataFrame = None
+    """
 
     def drop_unused_vars(self) -> None:
-        """only keep certain important variables"""
+        """Only keep certain variables"""
         keep_vars = [
             "tair",
             "ta9m",
@@ -35,7 +35,13 @@ class NYSM:
         self.df: pd.DataFrame = self.df[keep_vars]
 
     def write_parquet(self, temporal_resolution: str, filename: str) -> None:
-        """write combined dataframe from multiple years/stations to parquet"""
+        """
+        Write combined dataframe from multiple years/stations to parquet
+
+        Args:
+            temporal_resolution (str): time frequency of 1M or 5M
+            filename (str): filename to write to parquet
+        """
 
         if temporal_resolution == "1M":
             self.df["datetime"] = pd.to_datetime(self.df["datetime"], errors="coerce")
@@ -44,31 +50,69 @@ class NYSM:
             path = "../mesonet_parquet_5M"
         else:
             print("temporal resolution must be either 1M or 5M")
+            return
 
         pq.write_table(pa.Table.from_pandas(self.df), f"{path}/{filename}.parquet")
 
 
 @dataclass
 class NYSM_1M(NYSM):
-    """convert csv's to parquet for 1 min observations from 2017-2021
-    Mounted from /raid/lgaudet/precip/Precip/NYSM_1min_data to /ai2es/1_min_obs
-    Manually removed the few rows with 7 columns instead of 5 and values that were not floats (e.g., 0.00.00)"""
+    """
+    Convert csv's to parquet for 1 min observations from 2017-2021
+    - Manually removed the few rows with 7 columns instead of 5 and values that were not floats (e.g., 0.00.00)
+    - Mounted from /raid/lgaudet/precip/Precip/NYSM_1min_data to /ai2es/1_min_obs
+    - No snow measurements or T, RH, etc. in these csvs
+
+    Args:
+        df (pd.DataFrame): Concatenated df for 2017-2021 and NYSM observations at 1 min observations.
+                           Holds station, datetime, precip accumulation, and total precip
+        df_years (pd.DataFrame): grouped by by yearl of NYSM observations at 1 min observations.
+        filelist (List[str]): List of csv files of 1 min observations from csv_file_dir
+    """
 
     df: pd.DataFrame = None
+    df_years: pd.DataFrame = None
+    filelist: List[str] = field(default_factory=list, init=False)
 
-    def read_data(self, group: pd.DataFrame) -> None:
-        """read csv's for each day and concatenate into df
-        for reference on local machine:
-            2017: 25.83 sec
-            2018: 28.43 sec
-            2019: 27.28 sec
-            2020: 28.32 sec
-            2021: 27.41 sec
+    def csv_file_list(self) -> None:
         """
+        Generate list of csv files of 1 min observations from csv_file_dir
+        """
+        self.filelist = []
+        for root, dirs, files in os.walk(config.csv_file_dir):
+            self.filelist.extend(
+                os.path.join(root, file)
+                for file in files
+                if "checkpoint" not in file and file.endswith("csv")
+            )
 
-        files_in_year = []
+    def grouped_df_year(self) -> pd.DataFrame:
+        """
+        Group dataframe of NYSM files by year
+        """
+        self.df = pd.DataFrame(self.filelist, columns=["filename"])
+        self.df["year"] = self.df["filename"].str.split("/").str[4].str[:4]
+        self.df_years = self.df.groupby("year")
+
+    def read_data(self, group) -> None:
+        """
+        - Read csv's for each day for a given year and concatenate into df
+
+        - For reference on local machine:
+            - 2017: 25.83 sec
+            - 2018: 28.43 sec
+            - 2019: 27.28 sec
+            - 2020: 28.32 sec
+            - 2021: 27.41 sec
+
+        Args:
+            group (pd.DataFrame): yearly df
+        """
+        # sourcery skip: for-append-to-extend, list-comprehension
+        yearly_files = []
+
         for filename in group["filename"]:
-            files_in_year.append(
+            yearly_files.append(
                 pd.read_csv(
                     filename,
                     header=0,
@@ -83,40 +127,48 @@ class NYSM_1M(NYSM):
                 )
             )
 
-        self.df = pd.concat(files_in_year, axis=0, ignore_index=True)
-
-    def csv_file_list(self) -> List[str]:
-        """generate list of csv files of 1 min observations from csv_file_dir"""
-        filelist: List[str] = []
-        for root, dirs, files in os.walk(config.csv_file_dir):
-
-            filelist.extend(
-                os.path.join(root, file)
-                for file in files
-                if "checkpoint" not in file and file.endswith("csv")
-            )
-        return filelist
-
-    def grouped_df_year(self) -> pd.DataFrame:
-        """group dataframe of NYSM files by year"""
-        df = pd.DataFrame(self.csv_file_list(), columns=["filename"])
-        df["year"] = df["filename"].str.split("/").str[4].str[:4]
-        df = df.groupby("year")
-        return df
+        self.df = pd.concat(yearly_files, axis=0, ignore_index=True)
 
 
 @dataclass
 class NYSM_5M(NYSM):
     """
-    convert netcdf's to parquet for 5 min observations from 2015-2021
-    mounted in container from /raid/NYSM/archive/nysm/netcdf/proc/:/ai2es/5_min_obs/
+    Convert netcdf's to parquet for 5 min observations from 2015-2021
+    - Mounted in container from /raid/NYSM/archive/nysm/netcdf/proc/:/ai2es/5_min_obs/
+
+    Args:
+        df (pd.DataFrame): df of 5 min observations from 2015-2021
+        df_years (pd.DataFrame): grouped by by yearl of NYSM observations at 1 min observations.
+        self.filelist (List[str]): list of netcdf files
     """
 
     df: pd.DataFrame = None
+    df_years: pd.DataFrame = None
+    filelist: List[str] = field(default_factory=list, init=False)
+
+    def nc_file_list(self):
+        """
+        Generate list of nc files in directory - encompasses all years/months/days available
+        """
+        self.filelist = []
+        for root, _, files in os.walk(config.nc_file_dir):
+            self.filelist.extend(
+                os.path.join(root, file) for file in files if file.endswith(".nc")
+            )
+
+    def grouped_df_year(self) -> pd.DataFrame:
+        """
+        Group dataframe of 5M NYSM files by year
+        """
+        self.df = pd.DataFrame(self.filelist, columns=["filename"])
+        self.df["year"] = self.df["filename"].str.split("/").str[3]
+        self.df_years = self.df.groupby("year")
 
     def read_data(self, group: pd.DataFrame):
-        """use xarray to open netcdf's in parallel and convert to pd.DataFrame
-        timing on local machine for reference:
+        """
+        Use xarray to open netcdf's in parallel and convert to pd.DataFrame
+
+        - Timing on local machine for reference:
             2015: 13 sec
             2016: 84 sec
             2017: 47 sec
@@ -125,28 +177,15 @@ class NYSM_5M(NYSM):
             2020: 29 sec
             2021: 29 sec
             2022: 5 sec (partial year)
+
+        Args:
+            group (pd.DataFrame): yearly df
         """
         self.df = xr.open_mfdataset(group["filename"], parallel=True).to_dataframe()
 
-    def nc_file_list(self) -> List[str]:
-        """generate list of nc files in directory - encompasses all years/months/days available"""
-        filelist: List[str] = []
-        for root, dirs, files in os.walk(config.nc_file_dir):
-            filelist.extend(
-                os.path.join(root, file) for file in files if file.endswith("csv")
-            )
-        return filelist
-
-    def grouped_df_year(self) -> pd.DataFrame:
-        """group dataframe of NYSM files by year"""
-        df = pd.DataFrame(self.nc_file_list(), columns=["filename"])
-        df["year"] = df["filename"].str.split("/").str[6]
-        df = df.groupby("year")
-        return df
-
     def precip_diff(self) -> None:
         """
-        calculate precip over 5 min observations
+        Calculate precip over 5 min observations
         precip - since 00UTC every 5 mins
             resets to 0 at 00:05:00 or 00:00:00
         precip-total - Total Accumulated NRT (mm):
@@ -166,33 +205,38 @@ class NYSM_5M(NYSM):
         )
 
 
-def iterate_years_5M(nysm: NYSM_5M_type) -> None:
-    """loop over years of data and convert to parquet
+def iterate_years_5M(nysm: NYSM_5M) -> None:
+    """
+    Loop over years of data and convert to parquet
     after dropping unused vars and calculating precip diff
     between times/rows
 
     Args:
         nysm (NYSM_5M_type): class instance for 5 min observations
     """
-    df = nysm.grouped_df_year()
-    for year, group in df:
+    nysm.nc_file_list()
+    nysm.grouped_df_year()
+    for year, group in nysm.df_years:
         start_time = time.time()
         print(f"[INFO] Reading files for {year}...")
         nysm.read_data(group)
         nysm.drop_unused_vars()
         nysm.precip_diff()  # 1M already has accumulation over the minute
-        nysm.write_parquet("5M", f"{year}")
+        # nysm.write_parquet("5M", f"{year}")
         print_log(year, start_time)
 
 
-def iterate_years_1M(nysm: NYSM_1M_type) -> None:
-    """loop over years of data and convert to parquet
+def iterate_years_1M(nysm: NYSM_1M) -> None:
+    """
+    Loop over years of data and convert to parquet
 
     Args:
         nysm (NYSM_1M_type): class instance for 1 min observations
     """
-    df = nysm.grouped_df_year()
-    for year, group in df:
+    nysm.csv_file_list()
+    print(nysm.filelist)
+    nysm.grouped_df_year()
+    for year, group in nysm.df_years:
         start_time = time.time()
         print(f"[INFO] Reading files for {year}...")
         nysm.read_data(group)
@@ -201,7 +245,9 @@ def iterate_years_1M(nysm: NYSM_1M_type) -> None:
 
 
 def print_log(year: int, start_time: float) -> None:
-    """print when each year is done and how long the conversion took"""
+    """
+    Print when each year is done and how long the conversion took
+    """
     print(
         "[INFO] Done reading %s files in %.2f seconds"
         % (year, time.time() - start_time)

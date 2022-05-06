@@ -52,7 +52,6 @@ class GUI:
         Args:
             b: button instance
         """
-        print("here")
         self.index = self.index + 1
         self.visualizations()
 

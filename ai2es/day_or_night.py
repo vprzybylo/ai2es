@@ -1,6 +1,6 @@
 """
-Determine if image in nightmode.
-Processes in parallel for a given year.
+Determine if camera in nightmode.
+Processes in parallel across years.
 """
 import cv2
 import pandas as pd
@@ -13,13 +13,21 @@ from parallelbar import progress_map
 
 @dataclass
 class ImageFilter:
-    """append yearly df of images for day, night, precip, no precip, etc."""
+    """
+    Determine if camera in night/IR mode and append day or night to df
+
+    Args:
+        year (int): year of data to process
+        df (pd.DataFrame): df with time matched images and observations
+    """
 
     year: int
     df: pd.DataFrame = None
 
     def read_parquet(self):
-        """read parquet file that has yearly df of images"""
+        """
+        Read parquet file that has yearly df of images
+        """
         start_time = time.time()
         self.df = pd.read_parquet(f"/ai2es/matched_parquet/{str(self.year)}.parquet")
         print(
@@ -27,7 +35,12 @@ class ImageFilter:
         )
 
     def time_of_day(self, file: str) -> bool:
-        """find if images were taken during the day or night"""
+        """
+        Find if images were taken during the day or night
+
+        Args:
+            file (str): image filename to open
+        """
 
         image = np.asarray(Image.open(file))
         b, g, r = image[:, :, 0], image[:, :, 1], image[:, :, 2]

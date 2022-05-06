@@ -2,7 +2,6 @@
 import pandas as pd
 import os
 import numpy as np
-from datetime import datetime
 import warnings
 import pandas as pd
 import time
@@ -17,7 +16,13 @@ warnings.filterwarnings("ignore")
 
 @dataclass
 class Images:
-    """create df for camera images"""
+    """
+    Create df for camera images
+
+    Args:
+        year (int): year to process
+        camera_df (pd.DataFrame): df for camera images
+    """
 
     year: int
     camera_df: pd.DataFrame = None
@@ -57,15 +62,19 @@ class Images:
 
 @dataclass
 class DateMatch(Images):
-    """match camera images to closest mesonet observation in time for each station"""
+    """
+    Match camera images to closest mesonet observation in time for each station
 
-    df: pd.DataFrame = None  # mesonet obs df
-    all_station_groups = (
-        None  # list of pd.Dataframe of time matched stations to be concatenated
-    )
+    Args:
+        df (pd.DataFrame): mesonet observation dataframe
+        all_station_groups (List[pd.DataFrame]): time matched stations to be concatenated
+    """
+
+    df: pd.DataFrame = None
+    all_station_groups = None
 
     def read_parquet(self) -> None:
-        """read parquet file holding mesonet data for a specified year (all stations)"""
+        """Read parquet file holding mesonet data for a specified year (all stations)"""
         self.df = (
             pd.read_parquet(f"{config.parquet_dir}/{self.year}.parquet")
             .set_index(["datetime"])
@@ -73,10 +82,14 @@ class DateMatch(Images):
         )
 
     def check_time_diff(
-        self, nysm_time: datetime, image_time: datetime, time_diff: int = 5
+        self,
+        nysm_time: pd.core.indexes.datetimes.DatetimeIndex,
+        image_time: pd.core.indexes.datetimes.DatetimeIndex,
+        time_diff: int = 5,
     ) -> bool:
-        """ensure that the time matching between the camera time
-        (image_time) and the nysm obs time (nysm_time) is less than time_diff minutes
+        """
+        Ensure that the time matching between the image time and the nysm obs time (nysm_time)
+        is less than time_diff minutes
 
         Args:
             nysm_time (pandas._libs.tslibs.timestamps): time of nysm observation
@@ -84,6 +97,8 @@ class DateMatch(Images):
             time_diff (int, optional): time difference allowed in minutes between when
                                        the image was taken and when the mesonet observation was recorded.
                                        Defaults to 5.
+        Returns:
+            (np.ndarray[int]): indices where there is less than time_diff minutes
         """
         # time_delta_mins = divmod((image_time - nysm_time).total_seconds(), 60)[0]
         actual_time_delta = np.abs(image_time - nysm_time)
@@ -109,7 +124,8 @@ class DateMatch(Images):
     def find_closest_date(
         self, group_nysm: pd.DataFrame, group_cam: pd.DataFrame
     ) -> pd.DataFrame:
-        """for each datetime in the camera photo df, find the closest date in the mesonet df
+        """
+        For each datetime in the camera photo df, find the closest date in the mesonet df
         - vectorized
 
         Args:
@@ -145,6 +161,7 @@ class DateMatch(Images):
         # assign datetime that image was taken to nysm df where time_diff returns true (i.e., close enough match)
         group_cp["camera time"].iloc[matched_date_indices] = group_cam.index[time_diff]
         group_cp["path"].iloc[matched_date_indices] = group_cam["path"][time_diff]
+
         return group_cp
 
     def group_by_stations(self, time_diff=5) -> None:
@@ -157,12 +174,11 @@ class DateMatch(Images):
         Args:
             time_diff (int): time difference allowed between image and obs time. Defaults to 5 mins
         """
-        # eventually will hold the matched camera times based on time and station
+        # will hold the matched camera times based on time and station
         self.df["camera time"] = np.nan
         self.df["path"] = np.nan
         self.df = self.df.loc[self.df["stid"].isin(self.camera_df["stid"])]
 
-        start_time = time.time()
         self.all_stn_groups = []
         for (cam_stn, group_cam), (ny_stn, group_nysm) in zip(
             self.camera_df.groupby("stid"), self.df.groupby("stid")
@@ -171,7 +187,7 @@ class DateMatch(Images):
             self.all_stn_groups.append(group_cp)
 
     def time_diff_average(self) -> None:
-        """print stats on how far apart obs are from image timestamps (<time_diff mins)"""
+        """Print stats on how far apart obs are from image timestamps (<time_diff mins)"""
         actual_time_diff = np.abs(
             pd.to_datetime(self.df["camera time"]) - self.df.index
         )
@@ -180,7 +196,7 @@ class DateMatch(Images):
         )
 
     def write_df_per_year(self) -> None:
-        """output time matched df's per year for all stations"""
+        """Output time matched df's per year for all stations"""
         self.df.to_parquet(f"{config.write_path}/{self.year}.parquet")
 
 
@@ -194,7 +210,7 @@ def process_years(year: int) -> None:
     match.group_by_stations()
     match.concat_stn_data()
     match.time_diff_average()
-    match.write_df_per_year()
+    # match.write_df_per_year()
     print(f"[INFO] Year {year} completed in {round(time.time()-start_time, 2)} seconds")
 
 
@@ -203,7 +219,6 @@ def main() -> None:
     pool = Pool(len(years))
     pool.map(process_years, years)
     pool.close()
-    end_time = time.time()
 
 
 if __name__ == "__main__":
