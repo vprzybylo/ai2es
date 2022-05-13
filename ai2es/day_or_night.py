@@ -44,14 +44,10 @@ class ImageFilter:
 
         image = np.asarray(Image.open(file))
         b, g, r = image[:, :, 0], image[:, :, 1], image[:, :, 2]
-        if (b == g).all() and (b == r).all():
-            is_night = True
-        else:
-            is_night = False
+        return bool((b == g).all() and (b == r).all())
             # if row["precip_accum_1min [mm]"] > 0.5 and is_night:
             #     plt.imshow(image)
             #     plt.show()
-        return is_night
 
     def grayscale(self, img_path: str):  # -> ndarray[int, int]:
         """convert image to grayscale
