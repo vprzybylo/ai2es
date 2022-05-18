@@ -33,4 +33,5 @@ image-classification-tool
 *.jpg
 plots
 realtime_predictions
+nysm.csv
 /night_precip_hand_labeled
