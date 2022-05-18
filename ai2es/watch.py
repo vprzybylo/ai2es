@@ -8,7 +8,6 @@ import torch
 from datetime import datetime
 import csv
 from PIL import Image
-import netCDF4 as nc
 import os
 
 
@@ -17,12 +16,14 @@ class MonitorFolder(FileSystemEventHandler):
     Run CNN when a new image comes into directory
 
     Args:
-        w (_csv._writer): output file to write to
+        w (csv.writer): output file to write to
+        csvfile (open file): open file to write to
         b (cocpit.predictions.BatchPredictions): predictions for an image
     """
 
-    def __init__(self, w):
+    def __init__(self, w, csvfile):
         self.w = w
+        self.csvfile = csvfile
         self.b = None
 
     def check_night_image(self, filename):
@@ -38,14 +39,6 @@ class MonitorFolder(FileSystemEventHandler):
         b, g, r = image[:, :, 0], image[:, :, 1], image[:, :, 2]
         return bool((b == g).all() and (b == r).all())
 
-    def write_netcdf(self, filename):
-        fn = "test.nc"
-        ds = nc.Dataset(fn, "w", format="NETCDF4")
-
-        time = ds.createDimension("time", None)
-        lat = ds.createDimension("lat", 10)
-        lon = ds.createDimension("lon", 10)
-
     def write_csv(self, filename):
         """
         Write probability for each class out to a csv
@@ -57,12 +50,12 @@ class MonitorFolder(FileSystemEventHandler):
             [
                 filename.src_path,
                 config.CLASS_NAMES[np.argmax(self.b.probs)],
-                np.round(self.b.probs[0], 3) * 100,
-                np.round(self.b.probs[1], 3) * 100,
-                np.round(self.b.probs[2], 3) * 100,
+                f"{self.b.probs[0]* 100:.2f}",
+                f"{self.b.probs[1]* 100:.2f}",
+                f"{self.b.probs[2]* 100:.2f}",
             ]
         )
-        self.w.flush()
+        self.csvfile.flush()
 
     def on_created(self, event):
         """
@@ -72,29 +65,29 @@ class MonitorFolder(FileSystemEventHandler):
         Args:
             event (FileCreatedEvent): Event representing file/directory creation.
         """
-        print(event.src_path)
+        # print(event.src_path)
         test_data = cocpit.data_loaders.TestDataSet(
             open_dir="", file_list=[event.src_path]
         )
 
-        # if self.check_night_image(event.src_path):
-        test_loader = cocpit.data_loaders.create_loader(
-            test_data, batch_size=100, sampler=None
-        )
-        for imgs, _ in test_loader:
-            self.b = cocpit.predictions.BatchPredictions(
-                imgs, torch.load(config.MODEL_PATH)
+        if self.check_night_image(event.src_path):
+            test_loader = cocpit.data_loaders.create_loader(
+                test_data, batch_size=100, sampler=None
             )
-            with torch.no_grad():
-                self.b.find_max_preds()
-                self.b.top_k_preds(top_k_preds=3)
+            for imgs, _ in test_loader:
+                self.b = cocpit.predictions.BatchPredictions(
+                    imgs, torch.load(config.MODEL_PATH)
+                )
+                with torch.no_grad():
+                    self.b.find_max_preds()
+                    self.b.top_k_preds(top_k_preds=3)
 
-            self.write_csv(event)
-            # self.write_netcdf(event)
+                self.write_csv(event)
 
 
 def current_date():
-    """Current year/month/day for outfiles
+    """
+    Current year/month/day for outfiles
 
     Returns:
         (datetime): current date down to day
@@ -130,10 +123,6 @@ def csv_output_path(stn: str):
     return f"/ai2es/realtime_predictions/csv/{current_date()}/{stn}/{current_date().replace('/', '_')}.csv"
 
 
-def nc_output_path():
-    return f"/ai2es/realtime_predictions/nc/{current_date()}.nc"
-
-
 def observer_setup():
     """
     Create observers to watch directories across all stations
@@ -161,7 +150,9 @@ def observer_setup():
                 "precipitation",
             ]
         )
-        observer.schedule(MonitorFolder(w), path=path_to_check(stn), recursive=True)
+        observer.schedule(
+            MonitorFolder(w, csvfile), path=path_to_check(stn), recursive=True
+        )
         observers.append(observer)
     return observers, file_handles, observer
 
