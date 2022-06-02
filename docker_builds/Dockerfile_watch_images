@@ -11,6 +11,8 @@ RUN apt-get -y update && apt-get install -y --no-install-recommends \
 	ffmpeg \
         libsm6 \
 	vim \
+	procps \
+	cron \
 	python3-pip \
         && apt-get clean all && rm -rf /var/lib/apt/lists/*
 
@@ -27,4 +29,10 @@ COPY setup.py setup.py
 COPY README.md README.md
 RUN pip3 install -e .
 
-CMD ["python", "/ai2es/ai2es/watch.py"]
+#ENV PYTHONUNBUFFERED=1
+COPY crontab_watch /etc/cron.d/crontab_watch
+RUN /usr/bin/crontab /etc/cron.d/crontab_watch
+RUN touch /home/vanessa/cron_test.log
+
+CMD ["cron", "-f"]
+
