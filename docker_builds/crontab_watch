@@ -1,0 +1,2 @@
+0 * * * * /usr/bin/timeout -s 2 3599 /usr/local/bin/python /ai2es/ai2es/watch.py >> /home/vanessa/cron_test.log 2>&1
+
