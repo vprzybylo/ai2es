@@ -40,24 +40,25 @@ def train_models():
                     nofold_training(model_name, batch_size, epochs)
 
 
-def classification():
-    """
-    classify images using the ML model
-    """
-    print("running ML model to classify ice...")
+# TODO
+# def classification():
+#     """
+#     classify images using the ML model
+#     """
+#     print("running ML model to classify ice...")
 
-    start_time = time.time()
+#     start_time = time.time()
 
-    # load ML model for predictions
-    model = torch.load(config.MODEL_PATH)
+#     # load ML model for predictions
+#     model = torch.load(config.MODEL_PATH)
 
-    # load df of quality ice particles to make predictions on
-    df = pd.read_csv(df_path)
-    df = cocpit.run_model.main(df, model)  # remove open_dir from run_model
-    # df.to_csv(df_path, index=False)
+#     # load df of quality ice particles to make predictions on
+#     df = pd.read_csv(df_path)
+#     df = cocpit.run_model.main(df, model)  # remove open_dir from run_model
+#     # df.to_csv(df_path, index=False)
 
-    print("done classifying all images!")
-    print("time to classify ice = %.2f seconds" % (time.time() - start_time))
+#     print("done classifying all images!")
+#     print("time to classify ice = %.2f seconds" % (time.time() - start_time))
 
 
 if __name__ == "__main__":
