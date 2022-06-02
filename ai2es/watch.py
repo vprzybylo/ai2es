@@ -9,6 +9,8 @@ from datetime import datetime
 import csv
 from PIL import Image
 import os
+from typing import List, Tuple
+import io
 
 
 class MonitorFolder(FileSystemEventHandler):
@@ -17,16 +19,16 @@ class MonitorFolder(FileSystemEventHandler):
 
     Args:
         w (csv.writer): output file to write to
-        csvfile (open file): open file to write to
+        csvfile (io.TextIOWrapper): open file to write to
         b (cocpit.predictions.BatchPredictions): predictions for an image
     """
 
-    def __init__(self, w, csvfile):
-        self.w = w
+    def __init__(self, csvfile: io.TextIOWrapper):
         self.csvfile = csvfile
-        self.b = None
+        self.w = csv.writer(self.csvfile, delimiter=",")
+        self.b: cocpit.predictions.BatchPredictions = None
 
-    def check_night_image(self, filename):
+    def check_night_image(self, filename: str) -> bool:
         """
         Only make a prediction on image at night
 
@@ -39,17 +41,17 @@ class MonitorFolder(FileSystemEventHandler):
         b, g, r = image[:, :, 0], image[:, :, 1], image[:, :, 2]
         return bool((b == g).all() and (b == r).all())
 
-    def write_csv(self, filename):
+    def write_csv(self, event: FileSystemEventHandler):
         """
         Write probability for each class out to a csv
 
         Args:
-            filename (str): path to image
+            event (FileSystemEventHandler): event.src_path = path to new image
         """
         self.w.writerow(
             [
-                filename.src_path,
-                config.CLASS_NAMES[np.argmax(self.b.probs)],
+                event.src_path.split("/")[-1],
+                config.CLASS_NAMES[self.b.classes[0]],
                 f"{self.b.probs[0]* 100:.2f}",
                 f"{self.b.probs[1]* 100:.2f}",
                 f"{self.b.probs[2]* 100:.2f}",
@@ -57,45 +59,55 @@ class MonitorFolder(FileSystemEventHandler):
         )
         self.csvfile.flush()
 
-    def on_created(self, event):
+    def on_created(self, event: FileSystemEventHandler):
         """
         Overrides FileSystemEventHandler and what to do when file created
-        Creates a dataloader and makes pred
+        Creates a dataloader and makes prediction
 
         Args:
-            event (FileCreatedEvent): Event representing file/directory creation.
+            event (FileSystemEventHandler): Event representing file/directory creation.
         """
         # print(event.src_path)
         test_data = cocpit.data_loaders.TestDataSet(
-            open_dir="", file_list=[event.src_path]
+            open_dir="",
+            file_list=[event.src_path],
         )
 
         if self.check_night_image(event.src_path):
             test_loader = cocpit.data_loaders.create_loader(
-                test_data, batch_size=100, sampler=None
+                test_data, batch_size=1, sampler=None
             )
             for imgs, _ in test_loader:
+
                 self.b = cocpit.predictions.BatchPredictions(
                     imgs, torch.load(config.MODEL_PATH)
                 )
                 with torch.no_grad():
                     self.b.find_max_preds()
                     self.b.top_k_preds(top_k_preds=3)
+                # print(
+                #     path,
+                #     config.CLASS_NAMES[self.b.classes[0]],
+                #     f"{self.b.probs[0]* 100:.2f}",
+                #     f"{self.b.probs[1]* 100:.2f}",
+                #     f"{self.b.probs[2]* 100:.2f}",
+                # )
 
                 self.write_csv(event)
+                torch.cuda.empty_cache()
 
 
-def current_date():
+def current_date() -> str:
     """
     Current year/month/day for outfiles
 
     Returns:
-        (datetime): current date down to day
+        (str): current date down to day
     """
     return datetime.now().strftime("%Y/%m/%d")
 
 
-def path_to_check(stn):
+def path_to_check(stn: str) -> str:
     """
     Directory to monitor
 
@@ -104,64 +116,71 @@ def path_to_check(stn):
     Returns:
         (str): where images are getting fed into
     """
-    print(f"/ai2es/cam_photos/{current_date()}/{stn}")
+    # print(f"/ai2es/cam_photos/{current_date()}/{stn}")
     return f"/ai2es/cam_photos/{current_date()}/{stn}"
 
 
-def csv_output_path(stn: str):
+def csv_output_path() -> str:
     """
-    Where to save csv output files
-
-    Args:
-        stn (str): station id
+    Where to save csv output file
 
     Returns:
         (str): where predictions should be saved. Once daily.
     """
-    if not os.path.exists(f"/ai2es/realtime_predictions/csv/{current_date()}/{stn}"):
-        os.makedirs(f"/ai2es/realtime_predictions/csv/{current_date()}/{stn}")
-    return f"/ai2es/realtime_predictions/csv/{current_date()}/{stn}/{current_date().replace('/', '_')}.csv"
+    if not os.path.exists(f"/ai2es/realtime_predictions/csv/{current_date()}/"):
+        os.makedirs(f"/ai2es/realtime_predictions/csv/{current_date()}")
+    return f"/ai2es/realtime_predictions/csv/{current_date()}/{current_date().replace('/', '_')}.csv"
 
 
-def observer_setup():
+def write_header(w) -> csv.writer:
+    """
+    open csv file and write header for columns
+
+    Returns:
+        w (_csv._writer): a writer object responsible for converting data to CSV format
+    """
+
+    w.writerow(
+        [
+            "filename",
+            "top class",
+            "no precipitation",
+            "obstructed",
+            "precipitation",
+        ]
+    )
+    return w
+
+
+def observer_setup() -> Tuple[List[PollingObserver], io.TextIOWrapper, PollingObserver]:
     """
     Create observers to watch directories across all stations
 
     Returns:
         observers (List[PollingObserver]): list of observers across all stations
-        file_handles (List[TextIOWrapper]): list of open csv files to write preds to
+        csvfile (TextIOWrapper):  csv file to write preds to
         observer (PollingObserver): a PollingObserver instance
     """
-    observers = []
-    file_handles = []
     observer = PollingObserver()
-    for stn in config.stnid:
-        # write file header first
-        csvfile = open(csv_output_path(stn), "a", newline="")
-        file_handles.append(csvfile)
+    observers = []
 
-        w = csv.writer(csvfile, delimiter=",")
-        w.writerow(
-            [
-                "filename",
-                "top class",
-                "no precipitation",
-                "obstructed",
-                "precipitation",
-            ]
-        )
+    csvfile = open(csv_output_path(), "a", newline="")
+    # w = write_header(w)
+
+    for stn in config.stnid:
         observer.schedule(
-            MonitorFolder(w, csvfile), path=path_to_check(stn), recursive=True
+            MonitorFolder(csvfile), path=path_to_check(stn), recursive=True
         )
         observers.append(observer)
-    return observers, file_handles, observer
+    return (observers, csvfile, observer)
 
 
 if __name__ == "__main__":
 
-    observers, file_handles, observer = observer_setup()
+    observers, csvfile, observer = observer_setup()
     observer.start()
-    print("Monitoring started")
+    print("Monitoring started: ", datetime.now().strftime("%Y/%m/%d/%H:%M:%S"))
+
     try:
         while True:
             # Poll every x seconds
@@ -174,8 +193,7 @@ if __name__ == "__main__":
             # Stop observer if interrupted
             o.stop()
     finally:
-        for fh in file_handles:
-            fh.close()
+        csvfile.close()
         for o in observers:
             # Wait until the thread terminates before exit
             o.join()
