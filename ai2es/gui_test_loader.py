@@ -11,10 +11,10 @@ from cocpit.auto_str import auto_str
 from typing import Optional
 
 plt_params = {
-    "axes.labelsize": "xx-large",
-    "axes.titlesize": "xx-large",
-    "xtick.labelsize": "xx-large",
-    "ytick.labelsize": "xx-large",
+    "axes.labelsize": "large",
+    "axes.titlesize": "large",
+    "xtick.labelsize": "large",
+    "ytick.labelsize": "large",
     "legend.title_fontsize": 12,
 }
 plt.rcParams["font.family"] = "serif"
@@ -68,13 +68,13 @@ class GUI:
         station = self.all_paths[self.index].split("/")[-1].split("_")[-1].split(".")[0]
         if self.precip:
             ax1.set_title(
-                f"Model Labeled as: {[config.CLASS_NAMES[e] for e in self.all_topk_classes[self.index]][0]}\n"
+                f"Prediction: {[config.CLASS_NAMES[e] for e in self.all_topk_classes[self.index]][0]}\n"
                 f"Station: {station}\n"
                 f"1 min precip accumulation: {self.precip[self.index].values[0]}"
             )
         else:
             ax1.set_title(
-                f"Model Labeled as: {[config.CLASS_NAMES[e] for e in self.all_topk_classes[self.index]][0]}\n"
+                f"Prediction: {[config.CLASS_NAMES[e] for e in self.all_topk_classes[self.index]][0]}"
             )
         ax1.axis("off")
 
@@ -90,7 +90,8 @@ class GUI:
         ax3.set_yticklabels(
             [config.CLASS_NAMES[e] for e in self.all_topk_classes[self.index]]
         )
-        ax3.tick_params(axis="y", rotation=45)
+        ax3.yaxis.set_label_position("right")
+        ax3.yaxis.tick_right()
         ax3.invert_yaxis()  # labels read top-to-bottom
         ax3.set_title("Class Probability")
 
@@ -109,6 +110,7 @@ class GUI:
         ax2.imshow(saliency[0], cmap=plt.cm.hot, aspect="auto")
         ax2.axes.xaxis.set_ticks([])
         ax2.axes.yaxis.set_ticks([])
+        ax2.set_title("Saliency Map")
 
     def visualizations(self) -> None:
         """
@@ -124,10 +126,17 @@ class GUI:
                 return
             else:
                 image = self.open_image()
-                _, (ax1, ax2, ax3) = plt.subplots(
-                    constrained_layout=True, figsize=(7, 11), ncols=1, nrows=3
+                _, ((ax1, ax2, ax3), (ax4, ax5, ax6)) = plt.subplots(
+                    constrained_layout=True, figsize=(12, 6), ncols=3, nrows=2
                 )
                 self.init_fig(image, ax1)
                 self.plot_saliency(image, ax2)
                 self.bar_chart(ax3)
+                gcam = cocpit.plotting_scripts.grad_cam.GUIGradCAM(
+                    self.all_paths[self.index], "gradcam"
+                )
+                gcam.cam_method()
+                gcam.guided_backpropagation()
+                gcam.plot_grad_cam(ax4, ax5, ax6)
+
                 plt.show()
