@@ -68,7 +68,6 @@ class Interp():
         VBP = vanilla_backprop.VanillaBackprop()
         vanilla_grads = VBP.generate_gradients(self.prep_img, self.target_size)
         self.vanilla_grads = normalize(vanilla_grads)
-        print(np.shape(self.vanilla_grads))
 
     def plot_vanilla_bp(self, ax: plt.Axes) -> None:
         """plot vanilla backpropagation gradients"""

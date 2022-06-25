@@ -165,7 +165,7 @@ def observer_setup() -> Tuple[List[PollingObserver], io.TextIOWrapper, PollingOb
     observers = []
 
     csvfile = open(csv_output_path(), "a", newline="")
-    # w = write_header(w)
+    # w = write_header(w)s
 
     for stn in config.stnid:
         observer.schedule(
