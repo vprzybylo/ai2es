@@ -34,6 +34,6 @@ image-classification-tool
 plots
 realtime_predictions
 nysm.csv
-codebook
+codebook_dataset
 .DS_Store
 /night_precip_hand_labeled
