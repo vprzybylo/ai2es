@@ -6,6 +6,7 @@ import time
 
 import pandas as pd
 import torch
+from sklearn.model_selection import StratifiedKFold
 
 
 def nofold_training(model_name, batch_size, epochs):

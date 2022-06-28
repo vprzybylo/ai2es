@@ -260,10 +260,10 @@ class GUI(Interp):
                 return
             else:
                 self.open_image()
-                self.prep_img = preprocess_image(self.image).cuda()        
-                self.generate_cam()
-                self.get_guided_grads()
-                self.get_vanilla_grads()
+                self.prep_img = preprocess_image(self.image).cuda()
+                #self.generate_cam()
+                #self.get_guided_grads()
+                #self.get_vanilla_grads()
                 self.call_plots()
                 plt.show()
                 
