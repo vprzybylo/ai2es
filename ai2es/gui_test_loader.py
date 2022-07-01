@@ -15,6 +15,7 @@ from typing import Optional, Tuple
 import cv2
 import os
 from cocpit.interpretability import (gradcam, vanilla_backprop, guided_backprop)
+import shutil
 
 plt_params = {
     "axes.labelsize": "large",
@@ -230,10 +231,19 @@ class GUI(Interp):
         ax3.invert_yaxis()  # labels read top-to-bottom
         ax3.set_title("Class Probability")
 
-    def save(self, fig: plt.Axes, directory: str='/ai2es/codebook_dataset/carly/interpretability', class_='unsure_dark'):
+    def save_interp(self, fig: plt.Axes, directory: str='/ai2es/test_set/wrong', class_='precip_interp'):
         if not os.path.exists(os.path.join(directory, class_)):
             os.makedirs(os.path.join(directory, class_))
         fig.savefig(os.path.join(directory, class_, self.paths[self.index].split('/')[-1]))
+
+    def save_raw_image(self):
+        print(self.topk_classes[self.index][0])
+        class_ = config.CLASS_NAME_MAP[config.CLASS_NAMES[self.topk_classes[self.index][0]]]
+        filename = self.paths[self.index].split("/")[-1]
+        dest = f"{config.DATA_DIR}{class_}/{filename}"
+        # print(f"{self.paths[self.index]}")
+        shutil.move(self.paths[self.index], dest)
+       
 
     def call_plots(self, figsize: Tuple[int,int]=(12, 6), ncols=3, nrows=2):
         fig, ((ax1, ax2, ax3), (ax4, ax5, ax6)) = plt.subplots(
@@ -247,7 +257,8 @@ class GUI(Interp):
         self.plot_guided_gradcam(ax6)
         self.plot_saliency_pos(ax2)
         self.plot_saliency_neg(ax3)
-        self.save(fig)
+        #self.save_interp(fig)
+        
         
     def interp(self) -> None:
         """
@@ -261,9 +272,10 @@ class GUI(Interp):
             else:
                 self.open_image()
                 self.prep_img = preprocess_image(self.image).cuda()
-                #self.generate_cam()
-                #self.get_guided_grads()
-                #self.get_vanilla_grads()
+                self.generate_cam()
+                self.get_guided_grads()
+                self.get_vanilla_grads()
                 self.call_plots()
+                #self.save_raw_image()
                 plt.show()
                 
