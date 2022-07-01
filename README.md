@@ -70,3 +70,4 @@ Vanessa Przybylo - vprzybylo@albany.edu
 
 ## Acknowledgements
 * Development support given by the Atmospheric Sciences Research Center ExTreme Collaboration, Innovation, and TEchnology (xCITE) Laboratory. 
+* Funded under NSF Award Number 2019758
