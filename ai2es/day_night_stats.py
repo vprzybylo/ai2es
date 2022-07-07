@@ -1,6 +1,19 @@
 import pandas as pd
 import numpy as np
 
+def is_unique(
+               s
+               ):
+    s = list(s
+                )
+    s.sort()
+ 
+ 
+    for i in range(len(s) - 1):
+        if s[i] == s[i + 1]:
+            return 0
+    else:
+        return 1
 
 def precip_stats(year):
     df = pd.read_parquet(f"/ai2es/matched_parquet/{year}.parquet")
