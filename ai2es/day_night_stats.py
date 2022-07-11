@@ -1,30 +1,15 @@
-import pandas as pd
 import numpy as np
+import pandas as pd
 
-def is_unique(
-               s
-               ):
-    s = list(s
-                )
-    s.sort()
- 
 
- 
- 
-    for i in range(len(s) - 1):
-        if s[i] == s[i + 1]:
-            return 0
-    else:
-        return 1
-
-def precip_stats(year):
+def precip_stats(year: int) -> None:
     df = pd.read_parquet(f"/ai2es/matched_parquet/{year}.parquet")
     print(year)
     print("precip images: ", len(df[df["precip_accum_1min [mm]"] > 0.001]))
     print("no precip images: ", len(df[df["precip_accum_1min [mm]"] == 0.00]))
 
 
-def yearly_stats(year):
+def yearly_stats(year: int) -> None:
     df = pd.read_parquet(f"/ai2es/matched_parquet/{year}_timeofday.parquet")
     print(year)
     print("night images: ", len(df[df["night"] == True]))
