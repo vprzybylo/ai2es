@@ -2,14 +2,11 @@ import cocpit
 
 import cocpit.config as config  # isort: split
 import os
-import time
 
-import pandas as pd
-import torch
+from ray import tune
+from ray.tune.schedulers import ASHAScheduler
 from sklearn.model_selection import StratifiedKFold
 
-from ray.tune.schedulers import ASHAScheduler
-from ray import tune
 
 def nofold_training(model_name, batch_size, epochs):
     f = cocpit.fold_setup.FoldSetup(model_name, batch_size, epochs)
@@ -47,9 +44,11 @@ def kfold_training(batch_size: int, model_name: str, epochs: int) -> None:
         f.create_dataloaders()
         model_setup(f, model_name, epochs)
 
+
 def model_setup(f: cocpit.fold_setup.FoldSetup, model_name: str, epochs: int) -> None:
     """
-    Create instances for model configurations and training/validation. Runs model.
+    Create instances for model configurations and training/validation.
+    Runs model.
 
     Args:
         f (cocpit.fold_setup.FoldSetup): instance of FoldSetup class
@@ -73,13 +72,11 @@ def model_setup(f: cocpit.fold_setup.FoldSetup, model_name: str, epochs: int) ->
         kfold=0,
     )
 
-def train_models(config=None) -> None:
+
+def train_models() -> None:
     """
     Train ML models by looping through all batch sizes, models, epochs, and/or folds
     """
-    if config:
-        # use hyperparameter config in ray_tune_hp_search()
-        config = config
     for batch_size in config.BATCH_SIZE:
         print("BATCH SIZE: ", batch_size)
         for model_name in config.MODEL_NAMES:
@@ -98,26 +95,24 @@ def train_models(config=None) -> None:
                     model_setup(f, model_name, epochs)
 
 
-
 def ray_tune_hp_search():
     config = {
         "BATCH_SIZE": tune.choice(config.BATCH_SIZE),
         "MODEL_NAMES": tune.choice(config.MODEL_NAMES),
-        "LEARNING RATE":tune.choice(config.LR),
+        "LEARNING RATE": tune.choice(config.LR),
         "DROPOUT": tune.choice(config.DROP_RATE),
-        "MAX EPOCHS": tune.choice(config.MAX_EPOCHS)
+        "MAX EPOCHS": tune.choice(config.MAX_EPOCHS),
     }
     scheduler = ASHAScheduler(
-        max_t=config.MAX_EPOCHS,
-        grace_period=1,
-        reduction_factor=2)
+        max_t=config.MAX_EPOCHS, grace_period=1, reduction_factor=2
+    )
     result = tune.run(
         tune.with_parameters(train_models),
         resources_per_trial={"cpu": config.NUM_WORKERS, "gpu": 2},
         config=config,
         metric="loss",
         mode="min",
-        scheduler=scheduler
+        scheduler=scheduler,
     )
 
     best_trial = result.get_best_trial("loss", "min", "last")
@@ -150,9 +145,9 @@ def ray_tune_hp_search():
 if __name__ == "__main__":
 
     print(
-        "num workers in loader = {}".format(config.NUM_WORKERS)
+        f"num workers in loader = {config.NUM_WORKERS}"
     ) if config.CLASSIFICATION or config.BUILD_MODEL else print(
-        "num cpus for parallelization = {}".format(config.NUM_WORKERS)
+        f"num cpus for parallelization = {config.NUM_WORKERS}"
     )
 
     # only run one arbitrary year in loop if building model
@@ -167,9 +162,9 @@ if __name__ == "__main__":
 
         if config.BUILD_MODEL:
             train_models()
-        
-        if config.TUNE():
-            ray_tune_hp_search()
+
+        # if config.TUNE():
+        #     ray_tune_hp_search()
 
         if config.CLASSIFICATION:
             classification()
