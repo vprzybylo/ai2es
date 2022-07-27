@@ -93,27 +93,6 @@ def train_models() -> None:
                     model_setup(f, model_name, epochs)
 
 
-# TODO
-# def classification():
-#     """
-#     classify images using the ML model
-#     """
-#     print("running ML model to classify ice...")
-
-#     start_time = time.time()
-
-#     # load ML model for predictions
-#     model = torch.load(config.MODEL_PATH)
-
-#     # load df of quality ice particles to make predictions on
-#     df = pd.read_csv(df_path)
-#     df = cocpit.run_model.main(df, model)  # remove open_dir from run_model
-#     # df.to_csv(df_path, index=False)
-
-#     print("done classifying all images!")
-#     print("time to classify ice = %.2f seconds" % (time.time() - start_time))
-
-
 if __name__ == "__main__":
 
     print(
@@ -127,13 +106,5 @@ if __name__ == "__main__":
     for year in years:
         print("years: ", year)
 
-        # create dir for final databases
-        outname = f"{year}.parquet"
-
-        df_path = os.path.join(config.FINAL_DIR, outname)
-
         if config.BUILD_MODEL:
             train_models()
-
-        if config.CLASSIFICATION:
-            classification()

@@ -24,8 +24,7 @@ def model_setup(f: cocpit.fold_setup.FoldSetup, config: Dict[str, Any]) -> None:
 
     Args:
         f (cocpit.fold_setup.FoldSetup): instance of FoldSetup class
-        model_name (str): name of model architecture
-        epochs (int): number of iterations on dataset
+        config (Dict[])
     """
     m = cocpit.models.Model()
     # call method based on str model name
@@ -33,9 +32,9 @@ def model_setup(f: cocpit.fold_setup.FoldSetup, config: Dict[str, Any]) -> None:
     method(m)
 
     c = cocpit.model_config.ModelConfig(m.model)
-    c.set_optimizer(config)
+    c.set_optimizer(lr=config["LR"])
     c.set_criterion()
-    c.set_dropout(config)
+    c.set_dropout(drop_rate=config["DROP_RATE"])
     c.to_device()
     cocpit.runner.main(
         f,
