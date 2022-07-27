@@ -3,8 +3,6 @@ import cocpit
 import cocpit.config as config  # isort: split
 import os
 
-from ray import tune
-from ray.tune.schedulers import ASHAScheduler
 from sklearn.model_selection import StratifiedKFold
 
 
@@ -95,53 +93,6 @@ def train_models() -> None:
                     model_setup(f, model_name, epochs)
 
 
-def ray_tune_hp_search():
-    config = {
-        "BATCH_SIZE": tune.choice(config.BATCH_SIZE),
-        "MODEL_NAMES": tune.choice(config.MODEL_NAMES),
-        "LEARNING RATE": tune.choice(config.LR),
-        "DROPOUT": tune.choice(config.DROP_RATE),
-        "MAX EPOCHS": tune.choice(config.MAX_EPOCHS),
-    }
-    scheduler = ASHAScheduler(
-        max_t=config.MAX_EPOCHS, grace_period=1, reduction_factor=2
-    )
-    result = tune.run(
-        tune.with_parameters(train_models),
-        resources_per_trial={"cpu": config.NUM_WORKERS, "gpu": 2},
-        config=config,
-        metric="loss",
-        mode="min",
-        scheduler=scheduler,
-    )
-
-    best_trial = result.get_best_trial("loss", "min", "last")
-    print(f"Best trial config: {best_trial.config}")
-    print(f'Best trial final validation loss: {best_trial.last_result["loss"]}')
-    print(f'Best trial final validation accuracy: {best_trial.last_result["accuracy"]}')
-
-
-# TODO
-# def classification():
-#     """
-#     classify images using the ML model
-#     """
-#     print("running ML model to classify ice...")
-
-#     start_time = time.time()
-
-#     # load ML model for predictions
-#     model = torch.load(config.MODEL_PATH)
-
-#     # load df of quality ice particles to make predictions on
-#     df = pd.read_csv(df_path)
-#     df = cocpit.run_model.main(df, model)  # remove open_dir from run_model
-#     # df.to_csv(df_path, index=False)
-
-#     print("done classifying all images!")
-#     print("time to classify ice = %.2f seconds" % (time.time() - start_time))
-
-
 if __name__ == "__main__":
 
     print(
@@ -155,16 +106,5 @@ if __name__ == "__main__":
     for year in years:
         print("years: ", year)
 
-        # create dir for final databases
-        outname = f"{year}.parquet"
-
-        df_path = os.path.join(config.FINAL_DIR, outname)
-
         if config.BUILD_MODEL:
             train_models()
-
-        # if config.TUNE():
-        #     ray_tune_hp_search()
-
-        if config.CLASSIFICATION:
-            classification()

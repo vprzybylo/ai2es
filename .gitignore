@@ -1,4 +1,5 @@
 .nginx
+ray_tune*.csv
 ponicode
 .env
 setup.py
