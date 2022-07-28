@@ -1,16 +1,17 @@
-from cocpit import config as config
+import csv
+import io
+import os
 import time
-from watchdog.events import FileSystemEventHandler
-from watchdog.observers.polling import PollingObserver
+from datetime import datetime
+from typing import List, Tuple
+
 import cocpit
 import numpy as np
 import torch
-from datetime import datetime
-import csv
+from cocpit import config as config
 from PIL import Image
-import os
-from typing import List, Tuple
-import io
+from watchdog.events import FileSystemEventHandler
+from watchdog.observers.polling import PollingObserver
 
 
 class MonitorFolder(FileSystemEventHandler):
@@ -107,19 +108,6 @@ def current_date() -> str:
     return datetime.now().strftime("%Y/%m/%d")
 
 
-def path_to_check(stn: str) -> str:
-    """
-    Directory to monitor
-
-    Args:
-        stn (str): station id
-    Returns:
-        (str): where images are getting fed into
-    """
-    # print(f"/ai2es/cam_photos/{current_date()}/{stn}")
-    return f"/ai2es/cam_photos/{current_date()}/{stn}"
-
-
 def csv_output_path() -> str:
     """
     Where to save csv output file
@@ -165,13 +153,13 @@ def observer_setup() -> Tuple[List[PollingObserver], io.TextIOWrapper, PollingOb
     observers = []
 
     csvfile = open(csv_output_path(), "a", newline="")
-    # w = write_header(w)s
+    # w = write_header(w)
 
     for stn in config.stnid:
-        observer.schedule(
-            MonitorFolder(csvfile), path=path_to_check(stn), recursive=True
-        )
-        observers.append(observer)
+        path = f"/ai2es/cam_photos/{current_date()}/{stn}"
+        if os.path.exists(path):
+            observer.schedule(MonitorFolder(csvfile), path=path, recursive=True)
+            observers.append(observer)
     return (observers, csvfile, observer)
 
 
@@ -179,6 +167,7 @@ if __name__ == "__main__":
 
     observers, csvfile, observer = observer_setup()
     observer.start()
+
     print("Monitoring started: ", datetime.now().strftime("%Y/%m/%d/%H:%M:%S"))
 
     try:
