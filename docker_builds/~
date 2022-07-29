@@ -1,0 +1,1 @@
+* * * * * docker container restart  >> /home/vanessa/cron.log 2>&1

@@ -8,15 +8,6 @@ from ray import tune
 from ray.tune.schedulers import ASHAScheduler
 
 
-def nofold_training(model_name, batch_size, epochs):
-    f = cocpit.fold_setup.FoldSetup(model_name, batch_size, epochs)
-    f.nofold_indices()
-    f.split_data()
-    f.create_dataloaders()
-    optimizer, model = cocpit.model_config.main(model_name)
-    cocpit.runner.main(f.dataloaders, optimizer, model, epochs, model_name, batch_size)
-
-
 def model_setup(f: cocpit.fold_setup.FoldSetup, config: Dict[str, Any]) -> None:
     """
     Create instances for model configurations and training/validation.
