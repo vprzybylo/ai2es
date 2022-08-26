@@ -44,7 +44,7 @@ class MonitorFolder(FileSystemEventHandler):
             b, g, r = image[:, :, 0], image[:, :, 1], image[:, :, 2]
             return bool((b == g).all() and (b == r).all())
         except UnidentifiedImageError:
-            print("couldn't find file: {filename}")
+            print(f"couldn't find file: {filename}")
 
     def write_csv(self, event: FileSystemEventHandler):
         """

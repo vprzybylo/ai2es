@@ -73,13 +73,36 @@ class DateMatch(Images):
     df: pd.DataFrame = None
     all_station_groups = None
 
-    def read_parquet(self) -> None:
-        """Read parquet file holding mesonet data for a specified year (all stations)"""
-        self.df = (
-            pd.read_parquet(f"{config.parquet_dir}/{self.year}.parquet")
-            .set_index(["datetime"])
-            .sort_values(by=["datetime"])
-        )
+    def read_parquet(self, time_diff=5) -> None:
+        """Read parquet file holding mesonet data for a specified year (all stations)
+
+        Args:
+            time_diff (int): either 5 for 5 min obs or 1 for 1 min obs
+        """
+
+        if time_diff == 1:
+            self.df = (
+                pd.read_parquet(f"{config.parquet_dir_1M}/{self.year}.parquet")
+                .set_index(["datetime"])
+                .sort_values(by=["datetime"])
+            )
+        elif time_diff == 5:
+            self.df = (
+                pd.read_parquet(f"{config.parquet_dir_5M}/{self.year}.parquet")
+                .reset_index()
+                .set_index(["time_5M"])
+                .sort_values(by=["time_5M"])
+            ).rename(
+                columns={
+                    "station": "stid",
+                    "precip_max_intensity": "intensity [mm/min]",
+                    "precip_5M": "precip_accum_5min [mm]",
+                    "precip_total": "precip_total [mm]",
+                }
+            )
+            print(self.df)
+        else:
+            print("Observations are taken at either 1M or 5M intervals.")
 
     def check_time_diff(
         self,
@@ -210,12 +233,12 @@ def process_years(year: int) -> None:
     match.group_by_stations()
     match.concat_stn_data()
     match.time_diff_average()
-    # match.write_df_per_year()
+    match.write_df_per_year()
     print(f"[INFO] Year {year} completed in {round(time.time()-start_time, 2)} seconds")
 
 
 def main() -> None:
-    years = np.arange(2017, 2022)
+    years = np.arange(2022, 2023)
     pool = Pool(len(years))
     pool.map(process_years, years)
     pool.close()
