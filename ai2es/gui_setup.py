@@ -22,6 +22,8 @@ def read_parquet(
     """
     df = pd.read_parquet(f"/ai2es/matched_parquet/{year}_timeofday.parquet")
     df = df[df["night"] == True if time_of_day == "night" else df["night"] == False]
+    if year == 2022:
+        df.rename(columns={'precip_5min': 'precip_accum_1min [mm]'}, inplace=True)
     df = df[
         df["precip_accum_1min [mm]"] > precip_threshold
         if precip == "precip"
@@ -76,3 +78,4 @@ def show_new_images(df: pd.DataFrame) -> pd.DataFrame:
         f"Removing {len_before-len(df)} images that have already been labeled. {len(df)} remain."
     )
     return df
+

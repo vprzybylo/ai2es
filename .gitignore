@@ -37,4 +37,6 @@ realtime_predictions
 nysm.csv
 codebook_dataset
 .DS_Store
+pytorch-grad-cam
+carly_gradcam
 /night_precip_hand_labeled
