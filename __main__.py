@@ -1,7 +1,6 @@
 import cocpit
 
 import cocpit.config as config  # isort: split
-import os
 
 from sklearn.model_selection import StratifiedKFold
 
@@ -12,7 +11,14 @@ def nofold_training(model_name, batch_size, epochs):
     f.split_data()
     f.create_dataloaders()
     optimizer, model = cocpit.model_config.main(model_name)
-    cocpit.runner.main(f.dataloaders, optimizer, model, epochs, model_name, batch_size)
+    cocpit.runner.main(
+        f.dataloaders,
+        optimizer,
+        model,
+        epochs,
+        model_name,
+        batch_size,
+    )
 
 
 def kfold_training(batch_size: int, model_name: str, epochs: int) -> None:
@@ -36,14 +42,18 @@ def kfold_training(batch_size: int, model_name: str, epochs: int) -> None:
         print("KFOLD iteration: ", kfold)
 
         # apply appropriate transformations for training and validation sets
-        f = cocpit.fold_setup.FoldSetup(batch_size, kfold, train_indices, val_indices)
+        f = cocpit.fold_setup.FoldSetup(
+            batch_size, kfold, train_indices, val_indices
+        )
         f.split_data()
         f.update_save_names()
         f.create_dataloaders()
         model_setup(f, model_name, epochs)
 
 
-def model_setup(f: cocpit.fold_setup.FoldSetup, model_name: str, epochs: int) -> None:
+def model_setup(
+    f: cocpit.fold_setup.FoldSetup, model_name: str, epochs: int
+) -> None:
     """
     Create instances for model configurations and training/validation.
     Runs model.
@@ -73,7 +83,8 @@ def model_setup(f: cocpit.fold_setup.FoldSetup, model_name: str, epochs: int) ->
 
 def train_models() -> None:
     """
-    Train ML models by looping through all batch sizes, models, epochs, and/or folds
+    Train ML models by looping through all batch sizes, models,
+    epochs, and/or folds
     """
     for batch_size in config.BATCH_SIZE:
         print("BATCH SIZE: ", batch_size)
@@ -89,6 +100,7 @@ def train_models() -> None:
                     f = cocpit.fold_setup.FoldSetup(batch_size, 0, [], [])
                     f.nofold_indices()
                     f.split_data()
+
                     f.create_dataloaders()
                     model_setup(f, model_name, epochs)
 
