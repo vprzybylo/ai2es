@@ -1,3 +1,10 @@
+"""
+Make directories for precip and no precip based on rain gauge and mesonet data
+that corresponds to 2017 and 2022 images in hand labeled training dataset
+for comparison
+
+Run for each root dir subfolder/class at a time - not parallelized - takes awhile
+"""
 import pandas as pd
 import os
 import shutil
