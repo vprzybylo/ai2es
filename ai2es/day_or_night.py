@@ -69,7 +69,7 @@ def main() -> None:
     is_night = progress_map(
         filt.time_of_day,
         filt.df["path"],
-        chunk_size=772153,
+        chunk_size=158433,
         n_cpu=10,
         core_progress=True,
     )

@@ -21,13 +21,20 @@ def read_parquet(
         precip (str): 'precip' or 'no precip'
     """
     df = pd.read_parquet(f"/ai2es/matched_parquet/{year}_timeofday.parquet")
-    df = df[df["night"] == True if time_of_day == "night" else df["night"] == False]
+    df = df[
+        df["night"] == True if time_of_day == "night" else df["night"] == False
+    ]
+    if year == 2022:
+        df.rename(
+            columns={"precip_5min": "precip_accum_1min [mm]"}, inplace=True
+        )
     df = df[
         df["precip_accum_1min [mm]"] > precip_threshold
         if precip == "precip"
         else df["precip_accum_1min [mm]"] == 0.0
     ]
-    return (df, f"/ai2es/{time_of_day}_{precip}_hand_labeled/{year}")
+    # return (df, f"/ai2es/{time_of_day}_{precip}_hand_labeled/{year}")
+    return (df, f"/ai2es/test_set_2019")
 
 
 def shuffle_df(df: pd.DataFrame) -> pd.DataFrame:
@@ -60,7 +67,9 @@ def show_new_images(df: pd.DataFrame) -> pd.DataFrame:
 
     all_classes = [
         os.listdir(
-            os.path.join(cocpit.config.DATA_DIR, cocpit.config.CLASS_NAME_MAP[class_])
+            os.path.join(
+                cocpit.config.DATA_DIR, cocpit.config.CLASS_NAME_MAP[class_]
+            )
         )
         for class_ in cocpit.config.CLASS_NAMES
     ]
@@ -73,6 +82,7 @@ def show_new_images(df: pd.DataFrame) -> pd.DataFrame:
     len_before = len(df)
     df = df[~df_paths["paths"].isin(already_labeled["path"])]
     print(
-        f"Removing {len_before-len(df)} images that have already been labeled. {len(df)} remain."
+        f"Removing {len_before-len(df)} images that have already been labeled."
+        f" {len(df)} remain."
     )
     return df
