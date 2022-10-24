@@ -40,4 +40,5 @@ codebook_dataset
 pytorch-grad-cam
 carly_gradcam
 unsupervised
+*.pickle
 /night_precip_hand_labeled
