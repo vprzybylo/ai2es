@@ -34,7 +34,7 @@ def read_parquet(
         else df["precip_accum_1min [mm]"] == 0.0
     ]
     # return (df, f"/ai2es/{time_of_day}_{precip}_hand_labeled/{year}")
-    return (df, f"/ai2es/test_set_2019")
+    return df, "/ai2es/test_set_2019"
 
 
 def shuffle_df(df: pd.DataFrame) -> pd.DataFrame:

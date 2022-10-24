@@ -8,7 +8,9 @@ from ray import tune
 from ray.tune.schedulers import ASHAScheduler
 
 
-def model_setup(f: cocpit.fold_setup.FoldSetup, config: Dict[str, Any]) -> None:
+def model_setup(
+    f: cocpit.fold_setup.FoldSetup, config: Dict[str, Any]
+) -> None:
     """
     Create instances for model configurations and training/validation.
     Runs model.
@@ -53,7 +55,7 @@ def ray_tune_hp_search():
     result = tune.run(
         tune.with_parameters(train_models),
         resources_per_trial={"cpu": config.NUM_WORKERS, "gpu": 2},
-        config=config.config_ray,
+        config=config.CONFIG_RAY,
         metric="loss",
         mode="min",
         num_samples=10,
@@ -63,8 +65,13 @@ def ray_tune_hp_search():
 
     best_trial = result.get_best_trial("loss", "min", "last")
     print(f"Best trial config: {best_trial.config}")
-    print(f'Best trial final validation loss: {best_trial.last_result["loss"]}')
-    print(f'Best trial final validation accuracy: {best_trial.last_result["accuracy"]}')
+    print(
+        f'Best trial final validation loss: {best_trial.last_result["loss"]}'
+    )
+    print(
+        "Best trial final validation accuracy:"
+        f' {best_trial.last_result["accuracy"]}'
+    )
 
 
 if __name__ == "__main__":

@@ -41,4 +41,5 @@ pytorch-grad-cam
 carly_gradcam
 unsupervised
 *.pickle
+model_timing.csv
 /night_precip_hand_labeled

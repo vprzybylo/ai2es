@@ -44,7 +44,9 @@ class NYSM:
         """
 
         if temporal_resolution == "1M":
-            self.df["datetime"] = pd.to_datetime(self.df["datetime"], errors="coerce")
+            self.df["datetime"] = pd.to_datetime(
+                self.df["datetime"], errors="coerce"
+            )
             path = "../mesonet_parquet_1M"
         elif temporal_resolution == "5M":
             path = "../mesonet_parquet_5M"
@@ -52,7 +54,9 @@ class NYSM:
             print("temporal resolution must be either 1M or 5M")
             return
 
-        pq.write_table(pa.Table.from_pandas(self.df), f"{path}/{filename}.parquet")
+        pq.write_table(
+            pa.Table.from_pandas(self.df), f"{path}/{filename}.parquet"
+        )
 
 
 @dataclass
@@ -79,7 +83,7 @@ class NYSM_1M(NYSM):
         Generate list of csv files of 1 min observations from csv_file_dir
         """
         self.filelist = []
-        for root, dirs, files in os.walk(config.csv_file_dir):
+        for root, dirs, files in os.walk(config.CSV_FILE_DIR):
             self.filelist.extend(
                 os.path.join(root, file)
                 for file in files
@@ -151,9 +155,11 @@ class NYSM_5M(NYSM):
         Generate list of nc files in directory - encompasses all years/months/days available
         """
         self.filelist = []
-        for root, _, files in os.walk(config.nc_file_dir):
+        for root, _, files in os.walk(config.NC_FILE_DIR):
             self.filelist.extend(
-                os.path.join(root, file) for file in files if file.endswith(".nc")
+                os.path.join(root, file)
+                for file in files
+                if file.endswith(".nc")
             )
 
     def grouped_df_year(self) -> pd.DataFrame:
@@ -181,7 +187,9 @@ class NYSM_5M(NYSM):
         Args:
             group (pd.DataFrame): yearly df
         """
-        self.df = xr.open_mfdataset(group["filename"], parallel=True).to_dataframe()
+        self.df = xr.open_mfdataset(
+            group["filename"], parallel=True
+        ).to_dataframe()
 
     def precip_diff(self) -> None:
         """

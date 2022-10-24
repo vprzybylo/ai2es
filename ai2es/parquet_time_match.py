@@ -42,22 +42,29 @@ class Images:
     def create_datetime_col(self) -> None:
         """use filename to parse out datetime"""
         self.camera_df["datetime"] = pd.to_datetime(
-            self.camera_df["path"].str.split("/").str[-1].str.split("_").str[0],
+            self.camera_df["path"]
+            .str.split("/")
+            .str[-1]
+            .str.split("_")
+            .str[0],
             format="%Y%m%dT%H%M%S",
         )
 
     def camera_photo_paths(self) -> None:
         """create dataframe of camera images including station ids, paths, and datetimes"""
 
-        photo_files = Path(os.path.join(config.photo_dir, str(self.year))).rglob(
-            "*.jpg"
-        )
+        photo_files = Path(
+            os.path.join(config.PHOTO_DIR, str(self.year))
+        ).rglob("*.jpg")
 
         self.camera_df = pd.DataFrame({"path": photo_files}).astype(str)
         self.create_station_col()
         self.create_datetime_col()
         self.camera_df = self.camera_df.set_index(["datetime"])
-        print(f"[INFO] {self.year}: There were {len(self.camera_df)} images taken.")
+        print(
+            f"[INFO] {self.year}: There were {len(self.camera_df)} images"
+            " taken."
+        )
 
 
 @dataclass
@@ -82,13 +89,13 @@ class DateMatch(Images):
 
         if time_diff == 1:
             self.df = (
-                pd.read_parquet(f"{config.parquet_dir_1M}/{self.year}.parquet")
+                pd.read_parquet(f"{config.PARQUET_DIR_1M}/{self.year}.parquet")
                 .set_index(["datetime"])
                 .sort_values(by=["datetime"])
             )
         elif time_diff == 5:
             self.df = (
-                pd.read_parquet(f"{config.parquet_dir_5M}/{self.year}.parquet")
+                pd.read_parquet(f"{config.PARQUET_DIR_5M}/{self.year}.parquet")
                 .reset_index()
                 .set_index(["time_5M"])
                 .sort_values(by=["time_5M"])
@@ -138,10 +145,13 @@ class DateMatch(Images):
         len_before = len(self.df)
         self.df = pd.concat(self.all_stn_groups).dropna()
         print(
-            f"[INFO] {self.year}: {len(self.df)} observations were matched with images that have precip data."
+            f"[INFO] {self.year}: {len(self.df)} observations were matched"
+            " with images that have precip data."
         )
         print(
-            f"[INFO] {self.year}: {len_before - len(self.df)} rows of data were removed that don't have a corresponding image or precip data."
+            f"[INFO] {self.year}: {len_before - len(self.df)} rows of data"
+            " were removed that don't have a corresponding image or precip"
+            " data."
         )
 
     def find_closest_date(
@@ -182,8 +192,12 @@ class DateMatch(Images):
         matched_date_indices = matched_date_indices[time_diff]
 
         # assign datetime that image was taken to nysm df where time_diff returns true (i.e., close enough match)
-        group_cp["camera time"].iloc[matched_date_indices] = group_cam.index[time_diff]
-        group_cp["path"].iloc[matched_date_indices] = group_cam["path"][time_diff]
+        group_cp["camera time"].iloc[matched_date_indices] = group_cam.index[
+            time_diff
+        ]
+        group_cp["path"].iloc[matched_date_indices] = group_cam["path"][
+            time_diff
+        ]
 
         return group_cp
 
@@ -215,12 +229,13 @@ class DateMatch(Images):
             pd.to_datetime(self.df["camera time"]) - self.df.index
         )
         print(
-            f"[INFO] {self.year}: Distribution stats for how far apart obs and image time stamps are: {actual_time_diff.describe()}"
+            f"[INFO] {self.year}: Distribution stats for how far apart obs and"
+            f" image time stamps are: {actual_time_diff.describe()}"
         )
 
     def write_df_per_year(self) -> None:
         """Output time matched df's per year for all stations"""
-        self.df.to_parquet(f"{config.write_path}/{self.year}.parquet")
+        self.df.to_parquet(f"{config.WRITE_PATH}/{self.year}.parquet")
 
 
 def process_years(year: int) -> None:
@@ -234,7 +249,10 @@ def process_years(year: int) -> None:
     match.concat_stn_data()
     match.time_diff_average()
     match.write_df_per_year()
-    print(f"[INFO] Year {year} completed in {round(time.time()-start_time, 2)} seconds")
+    print(
+        f"[INFO] Year {year} completed in"
+        f" {round(time.time()-start_time, 2)} seconds"
+    )
 
 
 def main() -> None:
