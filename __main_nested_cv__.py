@@ -5,9 +5,22 @@ import cocpit.config as config  # isort: split
 from sklearn.model_selection import StratifiedKFold
 import numpy as np
 from cocpit.plotting_scripts import report as report
+import os
 
 
-def outer_kfold_training(
+def make_output_dirs():
+    for directory in [
+        config.FINAL_DIR,
+        config.MODEL_SAVE_DIR,
+        config.VAL_LOADER_SAVE_DIR,
+        config.ACC_SAVE_DIR,
+        config.PLOT_DIR,
+    ]:
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+
+
+def nested_kfold_runner(
     model_name: str,
 ) -> None:
     """
@@ -39,16 +52,15 @@ def outer_kfold_training(
         f.update_save_names()
 
         c = cocpit.tune.model_setup(model_name)
-        best_trial = cocpit.runner.inner_kfold_tune(
-            best_trial, f, c, model_name, kfold
-        )
+        best_trial = train_inner(f, c, model_name, kfold)
+
         (
             test_acc,
             test_uncertainties,
             test_probs,
             test_labels,
             test_preds,
-        ) = train_outer(best_trial)
+        ) = train_outer(best_trial, f, c, model_name, kfold)
         test_accs.append(test_acc)
         record_performance(
             model_name,
@@ -59,6 +71,19 @@ def outer_kfold_training(
             test_preds,
         )
     return np.mean(test_accs)
+
+
+def train_inner(f, c, model_name, kfold):
+    # Wrap the objective inside a lambda and call objective inside it
+    func = lambda trial: cocpit.tune.train_val_kfold_split(
+        trial,
+        f,
+        c,
+        model_name,
+        kfold,
+    )
+    best_trial = cocpit.tune.inner_kfold_tune(model_name, func)
+    return best_trial
 
 
 def train_outer(best_trial, f, c, model_name, kfold):
@@ -72,20 +97,22 @@ def train_outer(best_trial, f, c, model_name, kfold):
         test_probs,
         test_labels,
         test_preds,
-    ) = cocpit.tune.train_val(
+    ) = cocpit.tune.run_after_split(
         f,
         c,
-        best_trial.params["epochs"],
-        best_trial.params["batch_size"],
         model_name,
         kfold,  # outer k-fold cross validation index
+        best_trial.params["epochs"],
+        best_trial.params["batch_size"],
     )
     return test_acc, test_uncertainties, test_probs, test_labels, test_preds
 
 
 def record_performance(model_name, kfold, uncertainties, probs, labels, preds):
     """record performance plots and uncertainties"""
-    r = report.Report(uncertainties, probs, labels, preds)
+    r = cocpit.plotting_scripts.report.Report(
+        uncertainties, probs, labels, preds
+    )
     r.conf_matrix(labels, preds)
     r.class_report(model_name, labels, preds, kfold)
     r.uncertainty_prob_scatter(probs, uncertainties)
@@ -95,8 +122,9 @@ def record_performance(model_name, kfold, uncertainties, probs, labels, preds):
 
 if __name__ == "__main__":
     overall_model_accs = []
-    for model_name in config.MODEL_NAMES:
-        avg_test_acc = outer_kfold_training(model_name)
+    make_output_dirs()
+    for model_name in config.MODEL_NAMES_TUNE:
+        avg_test_acc = nested_kfold_runner(model_name)
         overall_model_accs.append(avg_test_acc)
     print(
         "The best overall model is"
