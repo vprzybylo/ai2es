@@ -1,10 +1,8 @@
 """main file to run for all training"""
 import cocpit
-
 import cocpit.config as config  # isort: split
 from sklearn.model_selection import StratifiedKFold
 import numpy as np
-from cocpit.plotting_scripts import report as report
 import os
 
 
@@ -39,20 +37,20 @@ def nested_kfold_runner(
     # datasets based on phase get called again in split_data
     # needed here to initialize for skf.split
     data = cocpit.data_loaders.get_data("val")
-    for kfold, (train_indices, test_indices) in enumerate(
+    for k_outer, (train_indices, test_indices) in enumerate(
         skf.split(data.imgs, data.targets)
     ):
-        print("KFOLD iteration: ", kfold)
+        print("KFOLD iteration: ", k_outer)
 
         # apply appropriate transformations for training and validation sets
         f = cocpit.fold_setup.FoldSetup(
-            model_name, kfold, train_indices, test_indices
+            model_name, k_outer, train_indices, test_indices
         )
         f.split_data()
         f.update_save_names()
 
         c = cocpit.tune.model_setup(model_name)
-        best_trial = train_inner(f, c, model_name, kfold)
+        best_trial = train_inner(f, c, model_name, k_outer)
 
         (
             test_acc,
@@ -60,11 +58,11 @@ def nested_kfold_runner(
             test_probs,
             test_labels,
             test_preds,
-        ) = train_outer(best_trial, f, c, model_name, kfold)
+        ) = train_outer(best_trial, f, c, model_name, k_outer)
         test_accs.append(test_acc)
         record_performance(
             model_name,
-            kfold,
+            k_outer,
             test_uncertainties,
             test_probs,
             test_labels,
@@ -73,20 +71,20 @@ def nested_kfold_runner(
     return np.mean(test_accs)
 
 
-def train_inner(f, c, model_name, kfold):
+def train_inner(f, c, model_name, k_outer):
     # Wrap the objective inside a lambda and call objective inside it
     func = lambda trial: cocpit.tune.train_val_kfold_split(
         trial,
         f,
         c,
         model_name,
-        kfold,
+        k_outer,
     )
     best_trial = cocpit.tune.inner_kfold_tune(model_name, func)
     return best_trial
 
 
-def train_outer(best_trial, f, c, model_name, kfold):
+def train_outer(best_trial, f, c, model_name, k_outer):
     """
     outer kfold loop for train test/train split
     applies best hyperoptimization of inner loop (best_trial)
@@ -101,20 +99,22 @@ def train_outer(best_trial, f, c, model_name, kfold):
         f,
         c,
         model_name,
-        kfold,  # outer k-fold cross validation index
+        k_outer,
         best_trial.params["epochs"],
         best_trial.params["batch_size"],
     )
     return test_acc, test_uncertainties, test_probs, test_labels, test_preds
 
 
-def record_performance(model_name, kfold, uncertainties, probs, labels, preds):
+def record_performance(
+    model_name, k_outer, uncertainties, probs, labels, preds
+):
     """record performance plots and uncertainties"""
     r = cocpit.plotting_scripts.report.Report(
         uncertainties, probs, labels, preds
     )
     r.conf_matrix(labels, preds)
-    r.class_report(model_name, labels, preds, kfold)
+    r.class_report(model_name, labels, preds, k_outer)
     r.uncertainty_prob_scatter(probs, uncertainties)
     r.hist(probs, f"{config.PLOT_DIR}/histogram_probs.png")
     r.hist(uncertainties, f"{config.PLOT_DIR}/histogram_uncertainties.png")
