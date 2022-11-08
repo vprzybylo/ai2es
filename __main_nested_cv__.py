@@ -1,5 +1,6 @@
 """main file to run for all training"""
 import cocpit
+from cocpit import plotting_scripts as plotting_scripts
 import cocpit.config as config  # isort: split
 from sklearn.model_selection import StratifiedKFold
 import numpy as np
@@ -60,6 +61,7 @@ def nested_kfold_runner(
             test_preds,
         ) = train_outer(best_trial, f, c, model_name, k_outer)
         test_accs.append(test_acc)
+
         record_performance(
             model_name,
             k_outer,
@@ -110,12 +112,10 @@ def record_performance(
     model_name, k_outer, uncertainties, probs, labels, preds
 ):
     """record performance plots and uncertainties"""
-    r = cocpit.plotting_scripts.report.Report(
-        uncertainties, probs, labels, preds
-    )
-    r.conf_matrix(labels, preds)
-    r.class_report(model_name, labels, preds, k_outer)
-    r.uncertainty_prob_scatter(probs, uncertainties)
+    r = plotting_scripts.report.Report(uncertainties, probs, labels, preds)
+    r.conf_matrix()
+    r.class_report(model_name, k_outer)
+    r.uncertainty_prob_scatter()
     r.hist(probs, f"{config.PLOT_DIR}/histogram_probs.png")
     r.hist(uncertainties, f"{config.PLOT_DIR}/histogram_uncertainties.png")
 
