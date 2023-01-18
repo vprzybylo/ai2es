@@ -75,6 +75,7 @@ def show_new_images(df: pd.DataFrame) -> pd.DataFrame:
     len_before = len(df)
     df = df[~df_paths["paths"].isin(already_labeled["path"])]
     print(
-        f"Removing {len_before-len(df)} images that have already been labeled. {len(df)} remain."
+        f"Removing {len_before-len(df)} images that have already been labeled."
+        f" {len(df)} remain."
     )
     return df

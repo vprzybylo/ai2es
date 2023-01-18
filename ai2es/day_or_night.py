@@ -45,9 +45,7 @@ class ImageFilter:
         image = np.asarray(Image.open(file))
         b, g, r = image[:, :, 0], image[:, :, 1], image[:, :, 2]
         return bool((b == g).all() and (b == r).all())
-            # if row["precip_accum_1min [mm]"] > 0.5 and is_night:
-            #     plt.imshow(image)
-            #     plt.show()
+
 
     def grayscale(self, img_path: str):  # -> ndarray[int, int]:
         """convert image to grayscale
@@ -64,14 +62,14 @@ class ImageFilter:
 
 def main() -> None:
 
-    year = 2017
+    year = 2022
     filt = ImageFilter(year)
     filt.read_parquet()
     print(f'{len(filt.df["path"])} files to process')
     is_night = progress_map(
         filt.time_of_day,
         filt.df["path"],
-        chunk_size=772153,
+        chunk_size=158433,
         n_cpu=10,
         core_progress=True,
     )

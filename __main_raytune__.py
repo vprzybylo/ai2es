@@ -1,3 +1,4 @@
+"""hyperparameterize one model using ray tune; configured in cocpit/config.py"""
 import cocpit
 
 import cocpit.config as config  # isort: split
@@ -8,14 +9,16 @@ from ray import tune
 from ray.tune.schedulers import ASHAScheduler
 
 
-def model_setup(f: cocpit.fold_setup.FoldSetup, config: Dict[str, Any]) -> None:
+def model_setup(
+    f: cocpit.fold_setup.FoldSetup, config: Dict[str, Any]
+) -> None:
     """
     Create instances for model configurations and training/validation.
     Runs model.
 
     Args:
         f (cocpit.fold_setup.FoldSetup): instance of FoldSetup class
-        config (Dict[])
+        config (Dict[str, str]): raytune configurations
     """
     m = cocpit.models.Model()
     # call method based on str model name
@@ -49,11 +52,20 @@ def train_models(config) -> None:
 
 def ray_tune_hp_search():
 
+    CONFIG_RAY = {
+        "BATCH_SIZE": tune.choice(config.BATCH_SIZE_TUNE),
+        "MODEL_NAMES": tune.choice(config.MODEL_NAMES_TUNE),
+        "LR": tune.choice(config.LR_TUNE),
+        "WEIGHT_DECAY": tune.choice(config.WEIGHT_DECAY_TUNE),
+        "DROP_RATE": tune.choice(config.DROP_RATE_TUNE),
+        "MAX_EPOCHS": tune.choice(config.MAX_EPOCHS_TUNE),
+    }
+
     scheduler = ASHAScheduler(max_t=50, grace_period=1, reduction_factor=2)
     result = tune.run(
         tune.with_parameters(train_models),
         resources_per_trial={"cpu": config.NUM_WORKERS, "gpu": 2},
-        config=config.config_ray,
+        config=CONFIG_RAY,
         metric="loss",
         mode="min",
         num_samples=10,
@@ -63,26 +75,14 @@ def ray_tune_hp_search():
 
     best_trial = result.get_best_trial("loss", "min", "last")
     print(f"Best trial config: {best_trial.config}")
-    print(f'Best trial final validation loss: {best_trial.last_result["loss"]}')
-    print(f'Best trial final validation accuracy: {best_trial.last_result["accuracy"]}')
+    print(
+        f'Best trial final validation loss: {best_trial.last_result["loss"]}'
+    )
+    print(
+        "Best trial final validation accuracy:"
+        f' {best_trial.last_result["accuracy"]}'
+    )
 
 
 if __name__ == "__main__":
-
-    print(
-        f"num workers in loader = {config.NUM_WORKERS}"
-    ) if config.CLASSIFICATION or config.BUILD_MODEL else print(
-        f"num cpus for parallelization = {config.NUM_WORKERS}"
-    )
-
-    # only run one arbitrary year in loop if building model
-    years = [2018] if config.BUILD_MODEL else [2018, 2019, 2020, 2021]
-    for year in years:
-        print("years: ", year)
-
-        # create dir for final databases
-        outname = f"{year}.parquet"
-
-        df_path = os.path.join(config.FINAL_DIR, outname)
-
-        ray_tune_hp_search()
+    ray_tune_hp_search()

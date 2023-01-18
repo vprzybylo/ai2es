@@ -255,7 +255,7 @@ def print_log(year: int, start_time: float) -> None:
     )
 
 
-def main(temporal_resolution="1M"):
+def main(temporal_resolution="5M"):
     """
     Read and convert all NYSM files to pandas dataframes in parallel based on year.
     Drop unused vars, calculate precip diff based on temporal resolution (1 or 5 min),

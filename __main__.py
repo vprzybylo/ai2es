@@ -47,7 +47,9 @@ def kfold_training(
         print("KFOLD iteration: ", kfold)
 
         # apply appropriate transformations for training and validation sets
-        f = cocpit.fold_setup.FoldSetup(batch_size, kfold, train_indices, val_indices)
+        f = cocpit.fold_setup.FoldSetup(
+            batch_size, kfold, train_indices, val_indices
+        )
         f.split_data()
         f.update_save_names()
         f.create_dataloaders()
