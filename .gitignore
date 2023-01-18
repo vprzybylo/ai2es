@@ -12,7 +12,7 @@ saved_accuracies
 saved_val_loaders
 .vscode
 docker_builds/README.md
-NYSM
+NYSM*
 *.pyc
 *.parquet
 worker*

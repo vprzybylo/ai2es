@@ -1,15 +1,15 @@
 """match NYSM camera images to precip observations for all stations by year"""
-import pandas as pd
 import os
-import numpy as np
-import warnings
-import pandas as pd
 import time
+import warnings
 from dataclasses import dataclass
+from datetime import timedelta
 from multiprocessing import Pool
 from pathlib import Path
-from datetime import timedelta
-import cocpit.config as config
+
+import numpy as np
+import pandas as pd
+from cocpit import config as config
 
 warnings.filterwarnings("ignore")
 
@@ -49,7 +49,7 @@ class Images:
     def camera_photo_paths(self) -> None:
         """create dataframe of camera images including station ids, paths, and datetimes"""
 
-        photo_files = Path(os.path.join(config.photo_dir, str(self.year))).rglob(
+        photo_files = Path(os.path.join(config.PHOTO_DIR, str(self.year))).rglob(
             "*.jpg"
         )
 
@@ -57,7 +57,7 @@ class Images:
         self.create_station_col()
         self.create_datetime_col()
         self.camera_df = self.camera_df.set_index(["datetime"])
-        print(f"[INFO] {self.year}: There were {len(self.camera_df)} images taken.")
+        print(f"[INFO] {self.year}: There were {len(self.camera_df)} images" " taken.")
 
 
 @dataclass
@@ -76,7 +76,7 @@ class DateMatch(Images):
     def read_parquet(self) -> None:
         """Read parquet file holding mesonet data for a specified year (all stations)"""
         self.df = (
-            pd.read_parquet(f"{config.parquet_dir}/{self.year}.parquet")
+            pd.read_parquet(f"{config.PARQUET_DIR}/{self.year}.parquet")
             .set_index(["datetime"])
             .sort_values(by=["datetime"])
         )
@@ -115,10 +115,13 @@ class DateMatch(Images):
         len_before = len(self.df)
         self.df = pd.concat(self.all_stn_groups).dropna()
         print(
-            f"[INFO] {self.year}: {len(self.df)} observations were matched with images that have precip data."
+            f"[INFO] {self.year}: {len(self.df)} observations were matched"
+            " with images that have precip data."
         )
         print(
-            f"[INFO] {self.year}: {len_before - len(self.df)} rows of data were removed that don't have a corresponding image or precip data."
+            f"[INFO] {self.year}: {len_before - len(self.df)} rows of data"
+            " were removed that don't have a corresponding image or precip"
+            " data."
         )
 
     def find_closest_date(
@@ -192,12 +195,13 @@ class DateMatch(Images):
             pd.to_datetime(self.df["camera time"]) - self.df.index
         )
         print(
-            f"[INFO] {self.year}: Distribution stats for how far apart obs and image time stamps are: {actual_time_diff.describe()}"
+            f"[INFO] {self.year}: Distribution stats for how far apart obs and"
+            f" image time stamps are: {actual_time_diff.describe()}"
         )
 
     def write_df_per_year(self) -> None:
         """Output time matched df's per year for all stations"""
-        self.df.to_parquet(f"{config.write_path}/{self.year}.parquet")
+        self.df.to_parquet(f"{config.WRITE_PATH}/{self.year}.parquet")
 
 
 def process_years(year: int) -> None:
@@ -211,7 +215,10 @@ def process_years(year: int) -> None:
     match.concat_stn_data()
     match.time_diff_average()
     # match.write_df_per_year()
-    print(f"[INFO] Year {year} completed in {round(time.time()-start_time, 2)} seconds")
+    print(
+        f"[INFO] Year {year} completed in"
+        f" {round(time.time()-start_time, 2)} seconds"
+    )
 
 
 def main() -> None:

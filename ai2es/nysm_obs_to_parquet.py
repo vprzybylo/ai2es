@@ -2,15 +2,16 @@
 create yearly parquet files of mesonet data for every station for either 1 min or 5 min observations
 """
 
-import pandas as pd
-import numpy as np
-import xarray as xr
-import time
-import pyarrow.parquet as pq
-import pyarrow as pa
 import os
-from typing import List
+import time
 from dataclasses import dataclass, field
+from typing import List
+
+import numpy as np
+import pandas as pd
+import pyarrow as pa
+import pyarrow.parquet as pq
+import xarray as xr
 from cocpit import config as config
 
 
@@ -79,7 +80,7 @@ class NYSM_1M(NYSM):
         Generate list of csv files of 1 min observations from csv_file_dir
         """
         self.filelist = []
-        for root, dirs, files in os.walk(config.csv_file_dir):
+        for root, dirs, files in os.walk(config.CSV_FILE_DIR):
             self.filelist.extend(
                 os.path.join(root, file)
                 for file in files
@@ -151,7 +152,7 @@ class NYSM_5M(NYSM):
         Generate list of nc files in directory - encompasses all years/months/days available
         """
         self.filelist = []
-        for root, _, files in os.walk(config.nc_file_dir):
+        for root, _, files in os.walk(config.NC_FILE_DIR):
             self.filelist.extend(
                 os.path.join(root, file) for file in files if file.endswith(".nc")
             )

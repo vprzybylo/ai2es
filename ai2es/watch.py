@@ -81,7 +81,10 @@ class MonitorFolder(FileSystemEventHandler):
             for imgs, _ in test_loader:
 
                 self.b = cocpit.predictions.BatchPredictions(
-                    imgs, torch.load(config.MODEL_PATH)
+                    imgs,
+                    torch.load(
+                        "/home/vanessa/hulk/ai2es/saved_models/e[30]_bs[64]_k0_1model(s).pt"
+                    ),
                 )
                 with torch.no_grad():
                     self.b.find_max_preds()
@@ -108,16 +111,16 @@ def current_date() -> str:
     return datetime.now().strftime("%Y/%m/%d")
 
 
-def csv_output_path() -> str:
+def csv_output_path(output_dir="/home/vanessa/hulk/ai2es/realtime_predictions") -> str:
     """
     Where to save csv output file
 
     Returns:
         (str): where predictions should be saved. Once daily.
     """
-    if not os.path.exists(f"/ai2es/realtime_predictions/csv/{current_date()}/"):
-        os.makedirs(f"/ai2es/realtime_predictions/csv/{current_date()}")
-    return f"/ai2es/realtime_predictions/csv/{current_date()}/{current_date().replace('/', '_')}.csv"
+    if not os.path.exists(f"self.output_dir/csv/{current_date()}/"):
+        os.makedirs(f"{output_dir}/csv/{current_date()}")
+    return f"{output_dir}/csv/{current_date()}/{current_date().replace('/', '_')}.csv"
 
 
 def write_header(w) -> csv.writer:
@@ -140,7 +143,9 @@ def write_header(w) -> csv.writer:
     return w
 
 
-def observer_setup() -> Tuple[List[PollingObserver], io.TextIOWrapper, PollingObserver]:
+def observer_setup(
+    photo_dir="/home/vanessa/hulk/ai2es/cam_photos",
+) -> Tuple[List[PollingObserver], io.TextIOWrapper, PollingObserver]:
     """
     Create observers to watch directories across all stations
 
@@ -156,7 +161,7 @@ def observer_setup() -> Tuple[List[PollingObserver], io.TextIOWrapper, PollingOb
     # w = write_header(w)
 
     for stn in config.stnid:
-        path = f"/ai2es/cam_photos/{current_date()}/{stn}"
+        path = f"{photo_dir}/{current_date()}/{stn}"
         if os.path.exists(path):
             observer.schedule(MonitorFolder(csvfile), path=path, recursive=True)
             observers.append(observer)

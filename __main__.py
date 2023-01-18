@@ -1,7 +1,6 @@
 import cocpit
 
 import cocpit.config as config  # isort: split
-import os
 
 from sklearn.model_selection import StratifiedKFold
 
@@ -12,10 +11,21 @@ def nofold_training(model_name, batch_size, epochs):
     f.split_data()
     f.create_dataloaders()
     optimizer, model = cocpit.model_config.main(model_name)
-    cocpit.runner.main(f.dataloaders, optimizer, model, epochs, model_name, batch_size)
+    cocpit.runner.main(
+        f.dataloaders,
+        optimizer,
+        model,
+        epochs,
+        model_name,
+        batch_size,
+    )
 
 
-def kfold_training(batch_size: int, model_name: str, epochs: int) -> None:
+def kfold_training(
+    batch_size: int,
+    model_name: str,
+    epochs: int,
+) -> None:
     """
     - Split dataset into folds
     - Preserve the percentage of samples for each class with stratified
@@ -25,6 +35,7 @@ def kfold_training(batch_size: int, model_name: str, epochs: int) -> None:
         batch_size (int): number of images read into memory at a time
         model_name (str): name of model architecture
         epochs (int): number of iterations on dataset
+        kfold (int): number of folds
     """
     skf = StratifiedKFold(n_splits=config.KFOLD, shuffle=True, random_state=42)
     # datasets based on phase get called again in split_data
@@ -40,10 +51,12 @@ def kfold_training(batch_size: int, model_name: str, epochs: int) -> None:
         f.split_data()
         f.update_save_names()
         f.create_dataloaders()
-        model_setup(f, model_name, epochs)
+        model_setup(f, model_name, epochs, kfold)
 
 
-def model_setup(f: cocpit.fold_setup.FoldSetup, model_name: str, epochs: int) -> None:
+def model_setup(
+    f: cocpit.fold_setup.FoldSetup, model_name: str, epochs: int, kfold: int
+) -> None:
     """
     Create instances for model configurations and training/validation.
     Runs model.
@@ -52,6 +65,7 @@ def model_setup(f: cocpit.fold_setup.FoldSetup, model_name: str, epochs: int) ->
         f (cocpit.fold_setup.FoldSetup): instance of FoldSetup class
         model_name (str): name of model architecture
         epochs (int): number of iterations on dataset
+        kfold (int): number of folds
     """
     m = cocpit.models.Model()
     # call method based on str model name
@@ -67,13 +81,14 @@ def model_setup(f: cocpit.fold_setup.FoldSetup, model_name: str, epochs: int) ->
         c,
         model_name,
         epochs,
-        kfold=0,
+        kfold=kfold,
     )
 
 
 def train_models() -> None:
     """
-    Train ML models by looping through all batch sizes, models, epochs, and/or folds
+    Train ML models by looping through all batch sizes, models,
+    epochs, and/or folds
     """
     for batch_size in config.BATCH_SIZE:
         print("BATCH SIZE: ", batch_size)
@@ -89,8 +104,9 @@ def train_models() -> None:
                     f = cocpit.fold_setup.FoldSetup(batch_size, 0, [], [])
                     f.nofold_indices()
                     f.split_data()
+
                     f.create_dataloaders()
-                    model_setup(f, model_name, epochs)
+                    model_setup(f, model_name, epochs, kfold=0)
 
 
 if __name__ == "__main__":
