@@ -72,37 +72,38 @@ class MonitorFolder(FileSystemEventHandler):
             event (FileSystemEventHandler): Event representing file/directory creation.
         """
 
-        if self.check_night_image(event.src_path):
-            test_data = cocpit.data_loaders.TestDataSet(
-                open_dir="",
-                file_list=[event.src_path],
-            )
-            test_loader = cocpit.data_loaders.create_loader(
-                test_data, batch_size=1, sampler=None
-            )
-            with torch.no_grad():
-                for imgs, _ in test_loader:
+        # if self.check_night_image(event.src_path):
+        # print(f"found image: {event.src_path}")
+        test_data = cocpit.data_loaders.TestDataSet(
+            open_dir="",
+            file_list=[event.src_path],
+        )
+        test_loader = cocpit.data_loaders.create_loader(
+            test_data, batch_size=1, sampler=None
+        )
+        with torch.no_grad():
+            for imgs, _ in test_loader:
 
-                    self.b = cocpit.predictions.BatchPredictions(
-                        imgs,
-                        torch.load(
-                            "/home/vanessa/hulk/ai2es/saved_models/e[30]_bs[64]_k0_1model(s).pt"
-                        ),
-                    )
-                    with torch.no_grad():
-                        self.b.find_max_preds()
-                        self.b.top_k_preds(top_k_preds=3)
-                        # print(
-                        #     path,
-                        #     config.CLASS_NAMES[self.b.classes[0]],
-                        #     f"{self.b.probs[0]* 100:.2f}",
-                        #     f"{self.b.probs[1]* 100:.2f}",
-                        #     f"{self.b.probs[2]* 100:.2f}",
-                        # )
+                self.b = cocpit.predictions.BatchPredictions(
+                    imgs,
+                    torch.load(
+                        "/home/vanessa/hulk/ai2es/saved_models/v0.0.0/e[30]_bs[64]_k0_1model(s).pt"
+                    ),
+                )
+                with torch.no_grad():
+                    self.b.find_max_preds()
+                    self.b.top_k_preds(top_k_preds=3)
+                    # print(
+                    #     path,
+                    #     config.CLASS_NAMES[self.b.classes[0]],
+                    #     f"{self.b.probs[0]* 100:.2f}",
+                    #     f"{self.b.probs[1]* 100:.2f}",
+                    #     f"{self.b.probs[2]* 100:.2f}",
+                    # )
 
-                        self.write_csv(event)
-                        del self.b
-                        torch.cuda.empty_cache()
+                    self.write_csv(event)
+                    del self.b
+                    torch.cuda.empty_cache()
 
 
 def current_date() -> str:
@@ -115,15 +116,17 @@ def current_date() -> str:
     return datetime.now().strftime("%Y/%m/%d")
 
 
-def csv_output_path(output_dir="/home/vanessa/hulk/ai2es/realtime_predictions") -> str:
+def csv_output_path(
+    output_dir="/home/vanessa/hulk/ai2es/realtime_predictions",
+) -> str:
     """
     Where to save csv output file
 
     Returns:
         (str): where predictions should be saved. Once daily.
     """
-    if not os.path.exists(f"self.output_dir/csv/{current_date()}/"):
-        os.makedirs(f"{output_dir}/csv/{current_date()}")
+    if not os.path.exists(f"{output_dir}/csv/{current_date()}/"):
+        os.makedirs(f"{output_dir}/csv/{current_date()}/", exist_ok=True)
     return f"{output_dir}/csv/{current_date()}/{current_date().replace('/', '_')}.csv"
 
 
@@ -148,7 +151,7 @@ def write_header(w) -> csv.writer:
 
 
 def observer_setup(
-    photo_dir="/home/vanessa/hulk/ai2es/cam_photos",
+    photo_dir="/rdma/dgx-a100/NYSM/archive/nysm/cam_photos",
 ) -> Tuple[List[PollingObserver], io.TextIOWrapper, PollingObserver]:
     """
     Create observers to watch directories across all stations
@@ -180,17 +183,20 @@ if __name__ == "__main__":
     print("Monitoring started: ", datetime.now().strftime("%Y/%m/%d/%H:%M:%S"))
 
     try:
-        while True:
+        # kill script if midnight to write to next days file
+        while datetime.now().minute != 35:
             # Poll every x seconds
             time.sleep(10)
 
     except KeyboardInterrupt:
         for o in observers:
+
             o.unschedule_all()
 
             # Stop observer if interrupted
             o.stop()
     finally:
+        print("Stopping monitoring to write to next days file")
         csvfile.close()
         for o in observers:
             # Wait until the thread terminates before exit

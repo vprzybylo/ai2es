@@ -17,23 +17,23 @@ import sys
 
 # Absolute path to to folder where the data and models live
 # BASE_DIR = '/Volumes/TOSHIBA EXT/raid/data/cpi_data'
-BASE_DIR = "/ai2es"
+BASE_DIR = "/home/vanessa/hulk/ai2es"
 
 # /raid/NYSM/archive/nysm/netcdf/proc/ on hulk
-nc_file_dir = f"{BASE_DIR}/5_min_obs"
+NC_FILE_DIR = f"{BASE_DIR}/5_min_obs"
 
 # /raid/lgaudet/precip/Precip/NYSM_1min_data on hulk
-csv_file_dir = f"{BASE_DIR}/1_min_obs"
+CSV_FILE_DIR = f"{BASE_DIR}/1_min_obs"
 
 # where to write time  matched data
-write_path = f"{BASE_DIR}/matched_parquet/"
+WRITE_PATH = f"{BASE_DIR}/matched_parquet/"
 
 # root dir to raw images (before each year subdir)
-photo_dir = f"{BASE_DIR}/cam_photos/"
+PHOTO_DIR = f"{BASE_DIR}/cam_photos/"
 
 # where the mesonet obs live in parquet format
 # output from nysm_obs_to_parquet
-parquet_dir = f"{BASE_DIR}/mesonet_parquet_1M"
+PARQUET_DIR = f"{BASE_DIR}/mesonet_parquet_1M"
 
 # ai2es version used in docker and git
 TAG = "v0.0.0"
@@ -195,3 +195,131 @@ if LOG_EXP and NOTEBOOK is False and BUILD_MODEL:
     experiment.add_tag(TAG)
 else:
     experiment = None
+
+stnid = [
+    "ADDI",
+    "ANDE",
+    "BATA",
+    "BEAC",
+    "BELD",
+    "BELL",
+    "BELM",
+    "BERK",
+    "BING",
+    "BKLN",
+    "BRAN",
+    "BREW",
+    "BROC",
+    "BRON",
+    "BROO",
+    "BSPA",
+    "BUFF",
+    "BURD",
+    "BURT",
+    "CAMD",
+    "CAPE",
+    "CHAZ",
+    "CHES",
+    "CINC",
+    "CLAR",
+    "CLIF",
+    "CLYM",
+    "COBL",
+    "COHO",
+    "COLD",
+    "COPA",
+    "COPE",
+    "CROG",
+    "CSQR",
+    "DELE",
+    "DEPO",
+    "DOVE",
+    "DUAN",
+    "EAUR",
+    "EDIN",
+    "EDWA",
+    "ELDR",
+    "ELLE",
+    "ELMI",
+    "ESSX",
+    "FAYE",
+    "FRED",
+    "GABR",
+    "GFAL",
+    "GFLD",
+    "GROT",
+    "GROV",
+    "HAMM",
+    "HARP",
+    "HARR",
+    "HART",
+    "HERK",
+    "HFAL",
+    "ILAK",
+    "JOHN",
+    "JORD",
+    "KIND",
+    "LAUR",
+    "LOUI",
+    "MALO",
+    "MANH",
+    "MEDI",
+    "MEDU",
+    "MORR",
+    "NBRA",
+    "NEWC",
+    "NHUD",
+    "OLDF",
+    "OLEA",
+    "ONTA",
+    "OPPE",
+    "OSCE",
+    "OSWE",
+    "OTIS",
+    "OWEG",
+    "PENN",
+    "PHIL",
+    "PISE",
+    "POTS",
+    "QUEE",
+    "RAND",
+    "RAQU",
+    "REDF",
+    "REDH",
+    "ROXB",
+    "RUSH",
+    "SARA",
+    "SBRI",
+    "SCHA",
+    "SCHO",
+    "SCHU",
+    "SCIP",
+    "SHER",
+    "SOME",
+    "SOUT",
+    "SPRA",
+    "SPRI",
+    "STAT",
+    "STEP",
+    "SUFF",
+    "TANN",
+    "TICO",
+    "TULL",
+    "TUPP",
+    "TYRO",
+    "VOOR",
+    "WALL",
+    "WALT",
+    "WANT",
+    "WARS",
+    "WARW",
+    "WATE",
+    "WBOU",
+    "WELL",
+    "WEST",
+    "WFMB",
+    "WGAT",
+    "WHIT",
+    "WOLC",
+    "YORK",
+]
