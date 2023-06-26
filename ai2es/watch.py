@@ -113,7 +113,17 @@ def current_date() -> str:
     Returns:
         (str): current date down to day
     """
-    return datetime.now().strftime("%Y/%m/%d")
+    return datetime.now().strftime("%Y/%m/%d/%H/%M/%S")
+
+
+def cam_photo_date() -> str:
+    """
+    Monitored dirs
+
+    Returns:
+        (str): current date down to day
+    """
+    return datetime.now().strftime("%Y/%m/%d/")
 
 
 def csv_output_path(
@@ -168,7 +178,7 @@ def observer_setup(
     # w = write_header(w)
 
     for stn in config.stnid:
-        path = f"{photo_dir}/{current_date()}/{stn}"
+        path = f"{photo_dir}/{cam_photo_date()}/{stn}"
         if os.path.exists(path):
             observer.schedule(MonitorFolder(csvfile), path=path, recursive=True)
             observers.append(observer)
@@ -184,7 +194,7 @@ if __name__ == "__main__":
 
     try:
         # kill script if midnight to write to next days file
-        while datetime.now().minute != 35:
+        while datetime.now().minute % 5 != 0:
             # Poll every x seconds
             time.sleep(10)
 
