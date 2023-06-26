@@ -2,13 +2,14 @@
 Determine if camera in nightmode.
 Processes in parallel across years.
 """
-import cv2
-import pandas as pd
-import numpy as np
-from dataclasses import dataclass
 import time
-from PIL import Image
+from dataclasses import dataclass
+
+import cv2
+import numpy as np
+import pandas as pd
 from parallelbar import progress_map
+from PIL import Image
 
 
 @dataclass
@@ -24,7 +25,7 @@ class ImageFilter:
     year: int
     df: pd.DataFrame = None
 
-    def read_parquet(self):
+    def read_parquet(self) -> None:
         """
         Read parquet file that has yearly df of images
         """
@@ -46,8 +47,7 @@ class ImageFilter:
         b, g, r = image[:, :, 0], image[:, :, 1], image[:, :, 2]
         return bool((b == g).all() and (b == r).all())
 
-
-    def grayscale(self, img_path: str):  # -> ndarray[int, int]:
+    def grayscale(self, img_path: str) -> ndarray[int, int]:
         """convert image to grayscale
 
         Args:
