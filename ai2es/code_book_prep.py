@@ -26,7 +26,8 @@ def parse_by_station(x: int = 150) -> None:
         stids = [file.split("_")[1].split(".")[0] for file in files]
         counts = defaultdict(int)
         savepath = os.path.join(
-            "/ai2es/codebook_dataset/", config.CLASS_NAME_MAP[class_name]
+            "/home/vanessa/hulk/ai2es/codebook_dataset/",
+            config.CLASS_NAME_MAP[class_name],
         )
         os.makedirs(savepath, exist_ok=True)
         for stn, file in zip(stids, files):
@@ -50,7 +51,10 @@ def split() -> None:
         print(class_name)
 
         files = os.listdir(
-            os.path.join("/ai2es/codebook_dataset/", config.CLASS_NAME_MAP[class_name])
+            os.path.join(
+                "/home/vanessa/hulk/ai2es/codebook_dataset/",
+                config.CLASS_NAME_MAP[class_name],
+            )
         )
         # each coder gets a random assortment across sites and classes
         random.shuffle(files)
@@ -60,7 +64,7 @@ def split() -> None:
             for file in subset:
 
                 savepath = os.path.join(
-                    "/ai2es/codebook_dataset/",
+                    "/home/vanessa/hulk/ai2es/codebook_dataset/",
                     name,
                     config.CLASS_NAME_MAP[class_name],
                 )

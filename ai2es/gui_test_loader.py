@@ -1,21 +1,25 @@
+"""Interpretability plot methods for GUI
+"""
+import os
+import shutil
+from typing import Optional, Tuple
+
+import cocpit
+import cocpit.config as config
+import cv2
 import ipywidgets
 import matplotlib.pyplot as plt
 import numpy as np
+import PIL
+from cocpit.auto_str import auto_str
+from cocpit.interpretability import gradcam, guided_backprop, vanilla_backprop
+from cocpit.interpretability.misc_funcs import (
+    apply_colormap_on_image,
+    normalize,
+    preprocess_image,
+)
 from IPython.display import clear_output
 from ipywidgets import Button
-import PIL
-import cocpit
-from cocpit.interpretability.misc_funcs import (normalize,
-                                preprocess_image,
-                                apply_colormap_on_image,
-                                )
-import cocpit.config as config
-from cocpit.auto_str import auto_str
-from typing import Optional, Tuple
-import cv2
-import os
-from cocpit.interpretability import (gradcam, vanilla_backprop, guided_backprop)
-import shutil
 
 plt_params = {
     "axes.labelsize": "large",
@@ -28,7 +32,7 @@ plt.rcParams["font.family"] = "serif"
 plt.rcParams.update(plt_params)
 
 
-class Interp():
+class Interp:
     """
     Interpretability plot methods for GUI
 
@@ -40,16 +44,21 @@ class Interp():
         neg_saliency (np.ndarray): Negative values in the gradients in which a small change to that pixel will decrease the output value
     """
 
-    def __init__(self, vanilla_grads=None, gradients=None, pos_saliency=None, neg_saliency=None, cam=None):
+    def __init__(
+        self,
+        vanilla_grads=None,
+        gradients=None,
+        pos_saliency=None,
+        neg_saliency=None,
+        cam=None,
+    ):
         self.vanilla_grads = vanilla_grads
         self.gradients = gradients
         self.pos_saliency = pos_saliency
         self.neg_saliency = neg_saliency
         self.cam = cam
-    
-    def plot_saliency(
-        self, ax2: plt.Axes, size: int = 224
-    ) -> None:
+
+    def plot_saliency(self, ax2: plt.Axes, size: int = 224) -> None:
         """create saliency map for image in test dataset
 
         Args:
@@ -58,7 +67,9 @@ class Interp():
         """
         image = cocpit.plotting_scripts.saliency.preprocess(self.image, size)
         saliency, _, _ = cocpit.plotting_scripts.saliency.get_saliency(image)
-        saliency = cv2.resize(np.array(np.transpose(saliency, (1,2,0))), self.target_size)
+        saliency = cv2.resize(
+            np.array(np.transpose(saliency, (1, 2, 0))), self.target_size
+        )
         ax2.imshow(saliency, cmap=plt.cm.hot)
         ax2.axes.xaxis.set_ticks([])
         ax2.axes.yaxis.set_ticks([])
@@ -75,9 +86,9 @@ class Interp():
         ax.imshow(self.vanilla_grads)
         ax.axes.xaxis.set_ticks([])
         ax.axes.yaxis.set_ticks([])
-        ax.axes.set_title('Vanilla Backpropagation')
+        ax.axes.set_title("Vanilla Backpropagation")
 
-    def generate_cam(self):
+    def generate_cam(self) -> None:
         """generate gradient class activation map"""
         grad_cam = gradcam.GradCam(target_layer=42)
         self.cam = grad_cam.generate_cam(self.prep_img)
@@ -86,11 +97,11 @@ class Interp():
         """plot gradient class activation map"""
         heatmap = apply_colormap_on_image(self.cam, self.image, alpha=0.5)
         ax.imshow(heatmap)
-        ax.axes.set_title('GRAD-CAM')
+        ax.axes.set_title("GRAD-CAM")
         ax.axes.xaxis.set_ticks([])
         ax.axes.yaxis.set_ticks([])
 
-    def get_guided_grads(self):
+    def get_guided_grads(self) -> None:
         """
         Guided backpropagation and saliency maps.
         Positive and negative gradients indicate the direction in which we
@@ -100,25 +111,28 @@ class Interp():
         """
         GBP = guided_backprop.GuidedBackprop()
         self.gradients = GBP.generate_gradients(self.prep_img, self.target_size)
-        self.pos_saliency = (np.maximum(0, self.gradients[:, :, 0]) / self.gradients[:, :, 0].max())
-        self.neg_saliency = (np.maximum(0, -self.gradients[:, :, 0]) / -self.gradients[:, :, 0].min())
-        
+        self.pos_saliency = (
+            np.maximum(0, self.gradients[:, :, 0]) / self.gradients[:, :, 0].max()
+        )
+        self.neg_saliency = (
+            np.maximum(0, -self.gradients[:, :, 0]) / -self.gradients[:, :, 0].min()
+        )
 
-    def plot_saliency_pos(self, ax: plt.Axes):
+    def plot_saliency_pos(self, ax: plt.Axes) -> None:
         """
         plot positive saliency - where gradients are positive after RELU
         """
         ax.imshow(self.pos_saliency)
-        ax.axes.set_title('Positive Saliency')
+        ax.axes.set_title("Positive Saliency")
         ax.axes.xaxis.set_ticks([])
         ax.axes.yaxis.set_ticks([])
 
-    def plot_saliency_neg(self, ax: plt.Axes):
+    def plot_saliency_neg(self, ax: plt.Axes) -> None:
         """
         plot negative saliency - where gradients are positive after RELU
         """
         ax.imshow(self.neg_saliency)
-        ax.axes.set_title('Negative Saliency')
+        ax.axes.set_title("Negative Saliency")
         ax.axes.xaxis.set_ticks([])
         ax.axes.yaxis.set_ticks([])
 
@@ -130,9 +144,9 @@ class Interp():
         to the image where negative gradients set to zero to highlight
         import pixel in the image when backpropagating through ReLU layers.
         """
-        cam_gb = np.multiply(self.cam, self.gradients[:,:,0])
+        cam_gb = np.multiply(self.cam, self.gradients[:, :, 0])
         ax.imshow(cam_gb)
-        ax.axes.set_title('Guided GRAD-CAM')
+        ax.axes.set_title("Guided GRAD-CAM")
         ax.axes.xaxis.set_ticks([])
         ax.axes.yaxis.set_ticks([])
 
@@ -154,8 +168,8 @@ class GUI(Interp):
         count (int): number of moved images
         prep_image (torch.Tensor): preprocessed image. Default None, defined in interp()
         target_size (Tuple[int, int]): original image size for resizing interpretability plots
-        """
-    
+    """
+
     def __init__(self, paths, topk_probs, topk_classes, precip=None):
         self.index = 0
         self.paths = paths
@@ -206,7 +220,7 @@ class GUI(Interp):
             )
         else:
             pred_list = [config.CLASS_NAMES[e] for e in self.topk_classes[self.index]]
-            pred_mag = [np.round(i*100,2) for i in self.topk_probs[self.index]]
+            pred_mag = [np.round(i * 100, 2) for i in self.topk_probs[self.index]]
             ax1.set_title(
                 f"Prediction [%]: \n"
                 f"{', '.join(repr(e) for e in pred_list)}\n"
@@ -231,35 +245,44 @@ class GUI(Interp):
         ax3.invert_yaxis()  # labels read top-to-bottom
         ax3.set_title("Class Probability")
 
-    def save_interp(self, fig: plt.Axes, directory: str='/ai2es/test_set/wrong', class_='precip_interp'):
+    def save_interp(
+        self,
+        fig: plt.Axes,
+        directory: str = "/home/vanessa/hulk/ai2es/test_set/wrong",
+        class_: str = "precip_interp",
+    ) -> None:
         if not os.path.exists(os.path.join(directory, class_)):
             os.makedirs(os.path.join(directory, class_))
-        fig.savefig(os.path.join(directory, class_, self.paths[self.index].split('/')[-1]))
+        fig.savefig(
+            os.path.join(directory, class_, self.paths[self.index].split("/")[-1])
+        )
 
-    def save_raw_image(self):
+    def save_raw_image(self) -> None:
         print(self.topk_classes[self.index][0])
-        class_ = config.CLASS_NAME_MAP[config.CLASS_NAMES[self.topk_classes[self.index][0]]]
+        class_ = config.CLASS_NAME_MAP[
+            config.CLASS_NAMES[self.topk_classes[self.index][0]]
+        ]
         filename = self.paths[self.index].split("/")[-1]
         dest = f"{config.DATA_DIR}{class_}/{filename}"
         # print(f"{self.paths[self.index]}")
         shutil.move(self.paths[self.index], dest)
-       
 
-    def call_plots(self, figsize: Tuple[int,int]=(12, 6), ncols=3, nrows=2):
+    def call_plots(
+        self, figsize: Tuple[int, int] = (12, 6), ncols: int = 3, nrows: int = 2
+    ) -> None:
         fig, ((ax1, ax2, ax3), (ax4, ax5, ax6)) = plt.subplots(
             constrained_layout=True, figsize=figsize, ncols=ncols, nrows=nrows
         )
         self.show_original(ax1)
-        #self.plot_saliency(ax2)
-        #self.bar_chart(ax3)
+        # self.plot_saliency(ax2)
+        # self.bar_chart(ax3)
         self.plot_vanilla_bp(ax4)
         self.plot_gradcam(ax5)
         self.plot_guided_gradcam(ax6)
         self.plot_saliency_pos(ax2)
         self.plot_saliency_neg(ax3)
-        #self.save_interp(fig)
-        
-        
+        # self.save_interp(fig)
+
     def interp(self) -> None:
         """
         Calculate gradients used in interpretability
@@ -276,6 +299,5 @@ class GUI(Interp):
                 self.get_guided_grads()
                 self.get_vanilla_grads()
                 self.call_plots()
-                #self.save_raw_image()
+                # self.save_raw_image()
                 plt.show()
-                

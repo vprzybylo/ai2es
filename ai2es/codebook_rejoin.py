@@ -28,9 +28,9 @@ def main(class_: str) -> None:
     """
     print(class_)
     # original labeled images
-    src = "/ai2es/night_precip_hand_labeled/2017"
+    src = "/home/vanessa/hulk/ai2es/night_precip_hand_labeled/2017"
     # where to merge the labeled images
-    dest = "/ai2es/codebook_dataset/combined_extra"
+    dest = "/home/vanessa/hulk/ai2es/codebook_dataset/combined_extra"
     files = os.listdir(os.path.join(src, class_))
     for filename in files:
         if not find_file(filename, dest):

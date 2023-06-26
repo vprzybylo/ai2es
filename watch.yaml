@@ -13,14 +13,14 @@ spec:
         spec:
           containers:
           - name: ai2es
-            image: vprzybylo/ai2es_watch:v1.0.0
+            image: vprzybylo/ai2es:v1.0.0
             volumeMounts:
             - name: nysm
               mountPath: /rdma/dgx-a100/NYSM/archive/nysm/
             - name: home
               mountPath: /home/vanessa/hulk/
             command: ["/bin/sh"]
-            args: ["-c", "python /home/vanessa/hulk/ai2es/ai2es/watch.py"]
+            args: ["-c", "python /home/vanessa/hulk/ai2es/watch.py"]
           volumes:
           - name: nysm
             hostPath:

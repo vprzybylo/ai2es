@@ -1,16 +1,17 @@
-"""output statistics on the training dataset such as total images belong to 
+"""output statistics on the training dataset such as total images belong to
 a specific class at a particular station"""
+
+import os
 
 import cocpit.config as config
 import numpy as np
 import pandas as pd
-import os
 from cocpit import config as config
 
 pd.options.mode.chained_assignment = None  # default='warn'
 
 
-def all_station_df():
+def all_station_df() -> pd.DataFrame:
     """make a df with all NYSM stations and 0s for classes len of stations"""
 
     return pd.DataFrame(
@@ -23,7 +24,7 @@ def all_station_df():
     )
 
 
-def dataset_stats(class_):
+def dataset_stats(class_: str) -> pd.DataFrame:
     """print # of images for a given class, unique stations for that class, and top station
 
     Args:
@@ -33,16 +34,14 @@ def dataset_stats(class_):
     """
 
     print(f"CLASS: {class_}")
-    files = os.listdir(
-        os.path.join(config.DATA_DIR, config.CLASS_NAME_MAP[class_])
-    )
+    files = os.listdir(os.path.join(config.DATA_DIR, config.CLASS_NAME_MAP[class_]))
     stids = [file.split("_")[1].split(".")[0] for file in files]
     df = pd.DataFrame({"stids": stids})
     print(df.stids.describe())
     return df
 
 
-def main():
+def main() -> pd.DataFrame:
     """create df highlighted by image count for each station/class"""
     df_precip = dataset_stats(class_="precipitation")
     df_no_precip = dataset_stats(class_="no precipitation")

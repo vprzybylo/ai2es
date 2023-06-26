@@ -4,14 +4,16 @@ import pandas as pd
 
 
 def precip_stats(year: int) -> None:
-    df = pd.read_parquet(f"/ai2es/matched_parquet/{year}.parquet")
+    df = pd.read_parquet(f"/home/vanessa/hulk/ai2es/matched_parquet/{year}.parquet")
     print(year)
     print("precip images: ", len(df[df["precip_accum_1min [mm]"] > 0.001]))
     print("no precip images: ", len(df[df["precip_accum_1min [mm]"] == 0.00]))
 
 
 def yearly_stats(year: int) -> None:
-    df = pd.read_parquet(f"/ai2es/matched_parquet/{year}_timeofday.parquet")
+    df = pd.read_parquet(
+        f"/home/vanessa/hulk/ai2es/matched_parquet/{year}_timeofday.parquet"
+    )
     print(year)
     print("night images: ", len(df[df["night"] == True]))
     print("day images: ", len(df[df["night"] == False]))

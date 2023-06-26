@@ -73,7 +73,7 @@ class DateMatch(Images):
     df: pd.DataFrame = None
     all_station_groups = None
 
-    def read_parquet(self, time_diff=5) -> None:
+    def read_parquet(self, time_diff: int = 5) -> None:
         """Read parquet file holding mesonet data for a specified year (all stations)
 
         Args:
@@ -190,7 +190,7 @@ class DateMatch(Images):
 
         return group_cp
 
-    def group_by_stations(self, time_diff=5) -> None:
+    def group_by_stations(self, time_diff: int = 5) -> None:
         """
         First group camera df by station id since there can be multiple
         identical times of images at diff stations.

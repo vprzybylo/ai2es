@@ -1,8 +1,14 @@
-import pandas as pd
+"""Read df with:
+    two class human labels (precip and no precip, removed obstructed),
+    three class human labels (precip obstructed and no precip),
+    two class rain gauge (obstructed mixed into precip and no precip),
+    and three class joint human/rain gauge (human labeled obs but rain gauge labeled precip and no precip)"""
 import os
 
+import pandas as pd
 
-def read_csv(filename):
+
+def read_csv(filename: str) -> pd.DataFrame:
     return pd.read_csv(
         filename,
         names=[
@@ -16,7 +22,7 @@ def read_csv(filename):
     )
 
 
-def main(root_dir):
+def main(root_dir: str) -> pd.DataFrame:
     two_gauge = read_csv(
         os.path.join(
             root_dir,

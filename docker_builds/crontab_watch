@@ -1,2 +1,1 @@
-0 * * * * /usr/bin/timeout -s SIGKILL 3599 /usr/local/bin/python /ai2es/ai2es/watch.py >> /home/vanessa/cron_test.log 2>&1
-
+0 * * * * /usr/bin/timeout -s SIGKILL 3599 /usr/local/bin/python /home/vanessa/hulk/ai2es/watch.py >> /home/vanessa/cron_test.log 2>&1

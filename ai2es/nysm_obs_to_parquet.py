@@ -61,7 +61,7 @@ class NYSM_1M(NYSM):
     """
     Convert csv's to parquet for 1 min observations from 2017-2021
     - Manually removed the few rows with 7 columns instead of 5 and values that were not floats (e.g., 0.00.00)
-    - Mounted from /raid/lgaudet/precip/Precip/NYSM_1min_data to /ai2es/1_min_obs
+    - Mounted from /raid/lgaudet/precip/Precip/NYSM_1min_data to /home/vanessa/hulk/ai2es/1_min_obs
     - No snow measurements or T, RH, etc. in these csvs
 
     Args:
@@ -95,7 +95,7 @@ class NYSM_1M(NYSM):
         self.df["year"] = self.df["filename"].str.split("/").str[4].str[:4]
         self.df_years = self.df.groupby("year")
 
-    def read_data(self, group) -> None:
+    def read_data(self, group: pd.DataFrame) -> None:
         """
         - Read csv's for each day for a given year and concatenate into df
 
@@ -135,7 +135,7 @@ class NYSM_1M(NYSM):
 class NYSM_5M(NYSM):
     """
     Convert netcdf's to parquet for 5 min observations from 2015-2021
-    - Mounted in container from /raid/NYSM/archive/nysm/netcdf/proc/:/ai2es/5_min_obs/
+    - Mounted in container from /raid/NYSM/archive/nysm/netcdf/proc/:/home/vanessa/hulk/ai2es/5_min_obs/
 
     Args:
         df (pd.DataFrame): df of 5 min observations from 2015-2021
@@ -147,7 +147,7 @@ class NYSM_5M(NYSM):
     df_years: pd.DataFrame = None
     filelist: List[str] = field(default_factory=list, init=False)
 
-    def nc_file_list(self):
+    def nc_file_list(self) -> None:
         """
         Generate list of nc files in directory - encompasses all years/months/days available
         """
@@ -165,7 +165,7 @@ class NYSM_5M(NYSM):
         self.df["year"] = self.df["filename"].str.split("/").str[3]
         self.df_years = self.df.groupby("year")
 
-    def read_data(self, group: pd.DataFrame):
+    def read_data(self, group: pd.DataFrame) -> None:
         """
         Use xarray to open netcdf's in parallel and convert to pd.DataFrame
 

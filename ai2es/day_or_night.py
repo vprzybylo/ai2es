@@ -30,7 +30,9 @@ class ImageFilter:
         Read parquet file that has yearly df of images
         """
         start_time = time.time()
-        self.df = pd.read_parquet(f"/ai2es/matched_parquet/{str(self.year)}.parquet")
+        self.df = pd.read_parquet(
+            f"/home/vanessa/hulk/ai2es/matched_parquet/{str(self.year)}.parquet"
+        )
         print(
             f"[INFO] Read {self.year} parquet file in {time.time()-start_time} seconds."
         )
@@ -75,7 +77,9 @@ def main() -> None:
     )
 
     filt.df["night"] = is_night
-    filt.df.to_parquet(f"/ai2es/matched_parquet/{year}_timeofday.parquet")
+    filt.df.to_parquet(
+        f"/home/vanessa/hulk/ai2es/matched_parquet/{year}_timeofday.parquet"
+    )
 
 
 if __name__ == "__main__":
