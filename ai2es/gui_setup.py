@@ -37,7 +37,7 @@ def shuffle_df(df: pd.DataFrame) -> pd.DataFrame:
     return df.sample(frac=1)
 
 
-def make_folders(folder_dest) -> None:
+def make_folders(folder_dest: str) -> None:
     """
     Make folders in training dir to save to if they don't exist
 
