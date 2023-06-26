@@ -1,3 +1,7 @@
+"""Monitor as images are populating the Mesonet folders and make predictions
+Runs indefinitely
+
+TODO: put in cron job/k8s job"""
 import csv
 import io
 import os
@@ -45,7 +49,7 @@ class MonitorFolder(FileSystemEventHandler):
         except UnidentifiedImageError:
             print(f"couldn't find file: {filename}")
 
-    def write_csv(self, event: FileSystemEventHandler):
+    def write_csv(self, event: FileSystemEventHandler) -> None:
         """
         Write probability for each class out to a csv
 
@@ -63,7 +67,7 @@ class MonitorFolder(FileSystemEventHandler):
         )
         self.csvfile.flush()
 
-    def on_created(self, event: FileSystemEventHandler):
+    def on_created(self, event: FileSystemEventHandler) -> None:
         """
         Overrides FileSystemEventHandler and what to do when file created
         Creates a dataloader and makes prediction
@@ -127,7 +131,7 @@ def cam_photo_date() -> str:
 
 
 def csv_output_path(
-    output_dir="/home/vanessa/hulk/ai2es/realtime_predictions",
+    output_dir: str = "/home/vanessa/hulk/ai2es/realtime_predictions",
 ) -> str:
     """
     Where to save csv output file
@@ -140,12 +144,12 @@ def csv_output_path(
     return f"{output_dir}/csv/{current_date()}/{current_date().replace('/', '_')}.csv"
 
 
-def write_header(w) -> csv.writer:
+def write_header(w: csv.writer) -> csv.writer:
     """
     open csv file and write header for columns
 
     Returns:
-        w (_csv._writer): a writer object responsible for converting data to CSV format
+        w (csv._writer): a writer object responsible for converting data to CSV format
     """
 
     w.writerow(
@@ -161,7 +165,7 @@ def write_header(w) -> csv.writer:
 
 
 def observer_setup(
-    photo_dir="/rdma/dgx-a100/NYSM/archive/nysm/cam_photos",
+    photo_dir: str = "/rdma/dgx-a100/NYSM/archive/nysm/cam_photos",
 ) -> Tuple[List[PollingObserver], io.TextIOWrapper, PollingObserver]:
     """
     Create observers to watch directories across all stations
