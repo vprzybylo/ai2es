@@ -1,3 +1,4 @@
+"""get yearly stats on number of images per year with and without precip and day/night"""
 import numpy as np
 import pandas as pd
 
