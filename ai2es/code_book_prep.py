@@ -1,14 +1,22 @@
+"""
+Codebook image generation
+"""
 import os
-import cocpit.config as config
-from collections import defaultdict
-from PIL import Image
 import random
+from collections import defaultdict
+
+import cocpit.config as config
 import numpy as np
+from PIL import Image
 
 
-def main(x=150):
-    """make sure there are no more than x images per station/class
-    from already lableled samples"""
+def parse_by_station(x: int = 150) -> None:
+    """
+    For each class, save up to x images from each site
+
+    Args:
+        x (int): The maximum number of images per station to save for labeling
+    """
 
     for class_name in config.CLASS_NAMES:
 
@@ -35,14 +43,16 @@ def main(x=150):
             counts[stn] += 1
 
 
-def split():
+def split() -> None:
+    """Split the images evenly across coders and classes"""
+
     for class_name in config.CLASS_NAMES:
-        files = os.listdir(
-            os.path.join(
-                "/ai2es/codebook_dataset/", config.CLASS_NAME_MAP[class_name]
-            )
-        )
         print(class_name)
+
+        files = os.listdir(
+            os.path.join("/ai2es/codebook_dataset/", config.CLASS_NAME_MAP[class_name])
+        )
+        # each coder gets a random assortment across sites and classes
         random.shuffle(files)
         sub_lists = np.array_split(files, 4)
         names = ["carly", "chris", "mariana", "vanessa"]
@@ -65,4 +75,6 @@ def split():
                 im.save(os.path.join(savepath, file))
 
 
-split()
+if __name__ == "__main__":
+    parse_by_station()
+    split()
