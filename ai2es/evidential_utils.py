@@ -91,7 +91,8 @@ def plot_uncertainty(
 
     axs[1].set_xlabel("Classes", fontsize=fontsize + 2)
     axs[1].set_ylabel("Softmax Probability", fontsize=fontsize + 2)
-    axs[1].set_title(f"Accumulated Precip: {precip}")
+    if precip:
+        axs[1].set_title(f"Accumulated Precip: {precip}")
 
     fig.tight_layout()
 
